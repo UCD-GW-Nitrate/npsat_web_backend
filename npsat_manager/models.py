@@ -152,6 +152,12 @@ class ModelRun(models.Model):
 	cvhm_farm = models.ForeignKey(CVHMFarm, null=True, blank=True, on_delete=models.DO_NOTHING, related_name="model_runs")
 	subbasin = models.ForeignKey(SubBasin, null=True, blank=True, on_delete=models.DO_NOTHING, related_name="model_runs")
 
+	# other model specs
+	n_years = models.IntegerField()
+	reduction_year = models.IntegerField()
+	water_content = models.DecimalField(max_digits=5, decimal_places=4)
+	scenario_name = models.CharField(max_length=255)
+
 	# modifications - backward relationship
 
 	def get_area_to_run(self):
@@ -260,7 +266,7 @@ class MantisServer(models.Model):
 
 		log.debug("Connecting to server to send command")
 		try:
-			self._non_async_send(model_run, number_of_records, modifications, scenario)
+			self._non_async_send(model_run, number_of_records, modifications)
 		except:
 			# on any exception, reset the state of this model run so it will be picked up again later
 			model_run.running = False
@@ -268,7 +274,7 @@ class MantisServer(models.Model):
 			model_run.save()
 			raise
 
-	def _non_async_send(self, model_run, number_of_records, modifications, scenario):
+	def _non_async_send(self, model_run, number_of_records, modifications):
 		area_type_id, area_subitem_id = model_run.get_area_to_run()
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		s.connect((self.host, self.port))
@@ -276,17 +282,18 @@ class MantisServer(models.Model):
 		# log.debug("Connected successfully")
 
 		# sent the command to the server
-		command_string = scenario
-		#command_string += " {}".format(area_type_id)
+		# detailed input refers to https://github.com/giorgk/Mantis#format-of-input-message
+		command_string = "{} {} {} {}".format(model_run.n_years, model_run.reduction_year, model_run.water_content, model_run.scenario_name)
+		command_string += " {}".format(area_type_id)
+		#TODO: change db to array type
 		#if area_subitem_id is not None:
 		#	command_string += " 1 {}".format(area_subitem_id)
-		command_string += " 1 1 1"  # do one subarea of the CVHM farms and make it the first subarea - this is for DEBUG
-		command_string += " {} {}".format(number_of_records, settings.ChangeYear)
+		command_string += " {}".format(number_of_records)
 		for modification in modifications.all():
-			command_string += " {} {}".format(modification.crop.caml_code, modification.proportion)
+			command_string += " {} {}".format(modification.crop.caml_code, 1 - modification.proportion)
+		command_string += 'ENDofMSG\n'
 		log.info("Command String is: {}".format(command_string))
 		s.send(command_string.encode('utf-8'))
-		s.send(b"\n")
 
 		# s.flush()
 		# mantis_writer.drain()  # make sure the full command is sent before proceeding with this function
