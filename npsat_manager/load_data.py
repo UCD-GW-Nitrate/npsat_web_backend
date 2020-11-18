@@ -8,9 +8,20 @@ from npsat_manager import models
 
 data_folder = os.path.join(settings.BASE_DIR, "npsat_manager", "data")
 
-def load_all():
+
+def load_all(mantis_port_number=5941):
 	load_crops()
 	load_regions()
+	load_scenarios()
+	load_mantis_server(mantis_port_number=mantis_port_number)
+
+
+def load_scenarios():
+	enable_scenario_dev_data()
+
+
+def load_mantis_server(mantis_port_number):
+	models.MantisServer.objects.create(host="127.0.0.1", port=mantis_port_number)
 
 
 def load_regions():
@@ -19,6 +30,7 @@ def load_regions():
 	load_central_valley()
 	load_basins()
 	load_townships()
+	load_b118_basin()
 
 
 def load_crops(crop_csv=os.path.join(data_folder, "crops", "gnlm_swat_matched.csv"),
@@ -71,9 +83,14 @@ def load_counties():
 	"""
 		:return:
 	"""
+	def counties_mantis_id_loader(data):
+		county_name = data["name"]
+		# strip any space in the name according to docs
+		return county_name.replace(' ', '')
 
 	county_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "california-counties-1.0.0", "geojson", "california_counties_simplified_0005.geojson")
-	load_spec_regions(county_file, (("name", "name"), ("abcode", "external_id")), region_type=models.Region.COUNTY)  #, ("ansi", "ansi_code")))
+	load_spec_regions(county_file, (("name", "name"), ("abcode", "external_id")), region_type=models.Region.COUNTY,
+					  mantis_id_loader=counties_mantis_id_loader)  #, ("ansi", "ansi_code")))
 
 	enable_default_counties(all=True)  # all is True just for testing - we'll set this to False later
 
@@ -82,31 +99,53 @@ def load_farms():
 	"""
 	:return:
 	"""
+	def farms_mantis_id_loader(data):
+		dwr = data["dwr_sbrgns"]
+		return "Farm{}".format(dwr)
 
 	field_map = (
 		('dwr_sbrgns', 'external_id'),
 		('ShortName', 'name'),
 	)
-	farm_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "CVHM-farm", "geojson", "CVHM_farms_cleaned.geojson")
-	load_spec_regions(farm_file, field_map, region_type=models.Region.CVHM_FARM)
+	farm_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "CVHM-farm", "geojson","CVHM_farms_cleaned.geojson")
+	load_spec_regions(farm_file, field_map, region_type=models.Region.CVHM_FARM, mantis_id_loader=farms_mantis_id_loader)
 
 
 def load_central_valley():
+	def central_valley_mantis_id_loader(data):
+		return "CentralValley"
 	central_valley_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "central_valley.geojson")
-	load_spec_regions(central_valley_file, (("name", "name"), ("Id", "external_id")), region_type=models.Region.CENTRAL_VALLEY)
+	load_spec_regions(central_valley_file, (("name", "name"), ("Id", "external_id")), region_type=models.Region.CENTRAL_VALLEY,
+					  mantis_id_loader=central_valley_mantis_id_loader)
 
 
 def load_basins():
+	def basins_mantis_id_loader(data):
+		return data["CVHM_Basin"].replace(' ', '')
+
 	basin_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "Basin", "geojson", "basin.geojson")
-	load_spec_regions(basin_file, (("CVHM_Basin", "name"), ("Basin_ID", "external_id")), region_type=models.Region.SUB_BASIN)
+	load_spec_regions(basin_file, (("CVHM_Basin", "name"), ("Basin_ID", "external_id")), region_type=models.Region.SUB_BASIN,
+					  mantis_id_loader=basins_mantis_id_loader)
 
 
 def load_townships():
-	basin_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "townships", "geojson", "townships.geojson")
-	load_spec_regions(basin_file, (("TOWNSHIP", "name"), ("TOWNSHIP", "external_id")), region_type=models.Region.TOWNSHIPS)
+	def townships_mantis_id_loader(data):
+		return data["CO_MTR"]
+
+	township_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "townships", "geojson", "townships.geojson")
+	load_spec_regions(township_file, (("TOWNSHIP", "name"), ("CO_MTR", "external_id")), region_type=models.Region.TOWNSHIPS,
+					  mantis_id_loader=townships_mantis_id_loader)
 
 
-def load_spec_regions(json_file, field_map, region_type):
+def load_b118_basin():
+	def b118_mantis_id_loader(data):
+		return data["BAS_SBBSN"].replace('-', '_')
+
+	b118_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "B118", "B118_filtered_2018.geojsonl.json")
+	load_spec_regions(b118_file, (("SUBNAME", "name"), ("SUBBSN", "external_id")), region_type=models.Region.B118_BASIN,
+					  mantis_id_loader=b118_mantis_id_loader)
+
+def load_spec_regions(json_file, field_map, region_type, mantis_id_loader=None):
 	"""
 		Given a geojson file, loads each record as a county instance, assigning data
 		to fields by the field map. The geojson file isn't a standard file, but instead just
@@ -138,6 +177,8 @@ def load_spec_regions(json_file, field_map, region_type):
 				setattr(region, fm[1], value)  # if it does, set it on the region object
 			setattr(region, 'region_type', region_type)
 
+		if mantis_id_loader:
+			region.mantis_id = mantis_id_loader(python_data["properties"])
 		region.save()  # save it with the new attributes
 
 

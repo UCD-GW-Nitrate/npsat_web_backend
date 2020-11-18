@@ -1,6 +1,7 @@
 import logging
 import time
 import datetime
+import traceback
 
 
 from django.core.management.base import BaseCommand, CommandError
@@ -36,14 +37,19 @@ class Command(BaseCommand):
 
 	def process_runs(self):
 		while True:
-			self._get_runs()
+			try:
+				self._get_runs()
 
-			if len(self._waiting_runs) == 0:  # if we don't have any runs, go to sleep for a few seconds, then check again
-				time.sleep(2)
-				continue
+				if len(self._waiting_runs) == 0:  # if we don't have any runs, go to sleep for a few seconds, then check again
+					time.sleep(2)
+					continue
 
-			for run in self._waiting_runs:
-				self.mantis_server.send_command(model_run=run)
+				for run in self._waiting_runs:
+					self.mantis_server.send_command(model_run=run)
+			except:
+				log.error("Encountered problem running model run - recovering")
+				log.error(traceback.format_exc())
+				raise
 
 	def _get_runs(self):
 		new_runs = models.ModelRun.objects.filter(status=models.ModelRun.READY)\
