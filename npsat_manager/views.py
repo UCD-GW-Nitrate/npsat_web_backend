@@ -192,7 +192,12 @@ class ModelRunViewSet(viewsets.ModelViewSet):
 		base_model = None
 		if include_base and not instance.is_base:
 			try:
-				base_model = models.ModelRun.objects.get(scenario=instance.scenario, is_base=True)
+				base_model = models.ModelRun.objects.get(
+					flow_scenario=instance.flow_scenario,
+					unsat_scenario=instance.unsat_scenario,
+					load_scenario=instance.load_scenario,
+					is_base=True
+				)
 			except models.ModelRun.DoesNotExist:
 				base_model = None
 		if base_model:

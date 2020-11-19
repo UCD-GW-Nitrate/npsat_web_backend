@@ -28,13 +28,6 @@ SERVER_EMAIL = ''  # what address does the email come from?
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
-
 MANTIS_STATUS_MESSAGE = "status"
 MANTIS_STATUS_RESPONSE = "online"
 
