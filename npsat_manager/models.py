@@ -437,7 +437,9 @@ class MantisServer(models.Model):
             results += s.recv(99999999)  # receive a chunk
             if results.endswith(b"ENDofMSG\n"):  # if Mantis says it finished and closed it, then break - otherwise get another chunk
                 break
-
+            if results.startswith(b"0"):
+                # Houston, we have a problem - some kind of error message, but it *won't* end with ENDofMSG, so we need to check
+                break
             iter += 1
         else:
             log.warning("Waiting for Mantis too many times - it's likely that runs are failing")
@@ -465,8 +467,9 @@ def process_results(results, model_run):
     # 	results = results[len(status_message):]  # if it starts with a status message, remove it
 
     results_values = results.split(b" ")
-    if results_values[0] == "0":  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
+    if results_values[0] == b"0":  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
         model_run.status_message = results_values
+        log.error(b"Mantis Error: {results}")
         model_run.status = ModelRun.ERROR
         model_run.save()
         return
