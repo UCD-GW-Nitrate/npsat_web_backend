@@ -432,10 +432,15 @@ class MantisServer(models.Model):
         # mantis_writer.drain()  # make sure the full command is sent before proceeding with this function
 
         results = b""
-        while True:
+        iter = 0
+        while iter < 10000:
             results += s.recv(99999999)  # receive a chunk
             if results.endswith(b"ENDofMSG\n"):  # if Mantis says it finished and closed it, then break - otherwise get another chunk
                 break
+
+            iter += 1
+        else:
+            log.warning("Waiting for Mantis too many times - it's likely that runs are failing")
 
         process_results(results, model_run)
         # model_run.result_values = str(results)
