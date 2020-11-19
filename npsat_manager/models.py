@@ -469,7 +469,7 @@ def process_results(results, model_run):
     results_values = results.split(b" ")
     if results_values[0] == b"0":  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
         model_run.status_message = results_values
-        log.error(b"Mantis Error: {results}")
+        log.error(f"Mantis Error: {results}")
         model_run.status = ModelRun.ERROR
         model_run.save()
         return
