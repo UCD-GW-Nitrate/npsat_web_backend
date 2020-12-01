@@ -133,7 +133,7 @@ def load_townships():
 		return data["CO_MTR"]
 
 	township_file = os.path.join(settings.BASE_DIR, "npsat_manager", "data", "townships", "geojson", "townships.geojson")
-	load_spec_regions(township_file, (("TOWNSHIP", "name"), ("CO_MTR", "external_id")), region_type=models.Region.TOWNSHIPS,
+	load_spec_regions(township_file, (("MTR", "name"), ("CO_MTR", "external_id")), region_type=models.Region.TOWNSHIPS,
 					  mantis_id_loader=townships_mantis_id_loader)
 
 

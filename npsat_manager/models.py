@@ -226,7 +226,7 @@ class ModelRun(models.Model):
     regions = models.ManyToManyField(Region, related_name="model_runs")
 
     # other model specs
-    n_years = models.IntegerField(default=100, blank=True)
+    sim_end_year = models.IntegerField(default=2300, blank=True)
     reduction_start_year = models.IntegerField(default=2020, blank=True)
     reduction_end_year = models.IntegerField(default=2025, blank=True)
     water_content = models.DecimalField(max_digits=5, decimal_places=4, default=0)
@@ -275,7 +275,7 @@ class ModelRun(models.Model):
 
     @property
     def input_message(self):
-        msg = f"endSimYear {self.reduction_start_year+self.n_years}"
+        msg = f"endSimYear {str(self.sim_end_year)}"
         msg += f" startRed {self.reduction_start_year}"
         msg += f" endRed {self.reduction_end_year}"
         msg += f" flowScen {self.flow_scenario.name}"
@@ -287,12 +287,6 @@ class ModelRun(models.Model):
         msg += f" bMap {Region.REGION_TYPE_MANTIS[regions[0].region_type]}"
         msg += f" Nregions {len(regions)}"
         for region in regions:
-            ### TEMPORARY
-            #
-            #msg += " CentralValley"
-            #
-            ### TEMPORARY
-
             msg += f" {region.mantis_id}"
 
         modifications = self.modifications.all()
@@ -480,7 +474,7 @@ def process_results(results, model_run):
     results_values = [value for value in results_values if value not in (
         b"", b"\n")]  # drop any extra empty values we got because they make the total number go off
     model_run.n_wells = int(results_values[1])
-    n_years = int(results_values[2])  # we're not using this right now
+    n_years = int(results_values[2])
     results_values = results_values[
                      3:-1]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
 

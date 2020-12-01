@@ -264,7 +264,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
 				else:
 					return results.order_by('-' + sorter_field)
 
-		return results.order_by('id')
+		return results.order_by('-id')
 
 
 class ModificationViewSet(viewsets.ModelViewSet):
@@ -284,7 +284,7 @@ class ModificationViewSet(viewsets.ModelViewSet):
 				Q(model__public=True) |
 				Q(model__is_base=True)
 			)\
-			.order_by('id')
+			.order_by('-id')
 
 
 class ResultPercentileViewSet(viewsets.ModelViewSet):
@@ -306,5 +306,5 @@ class ResultPercentileViewSet(viewsets.ModelViewSet):
 				Q(model__public=True) |
 				Q(model__is_base=True)
 			)\
-			.order_by('id')
+			.order_by('-id')
 
