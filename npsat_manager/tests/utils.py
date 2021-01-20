@@ -225,6 +225,7 @@ def load_test_users():
     User.objects.create(username="test_user3", password="user3").save()
 
     User.objects.create(username="test_admin", password="admin").save()
+    User.objects.create(username="service bot", password="admin").save()
 
 
 def load_default_model_runs():
@@ -240,6 +241,7 @@ def load_default_model_runs():
             others don't have any models
     """
 
+    load_data.load_system_admin_bot()
     # ensure admin presents in the database
     try:
         admin = User.objects.get(username="test_admin")

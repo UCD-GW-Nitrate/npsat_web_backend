@@ -10,6 +10,8 @@ from django.test import TestCase
 from npsat_manager import models
 from django.db import transaction
 from django.contrib.auth.models import User
+from django.db import IntegrityError
+from npsat_manager.tests import utils
 
 
 class ResourcesTestCase(TestCase):
@@ -144,6 +146,7 @@ class ModelRunTestCase(TestCase):
         """
         Setting up users and some resources
         """
+        utils.load_test_users()
         with transaction.atomic():
             # users
             User.objects.create(username="user1", password="user1").save()

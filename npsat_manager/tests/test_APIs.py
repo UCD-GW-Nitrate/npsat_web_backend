@@ -13,8 +13,6 @@ from npsat_manager.tests import utils
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 
-import random
-
 
 class APITestCase(TestCase):
     """
@@ -301,6 +299,9 @@ class APITestCase(TestCase):
         res = client_logged_in.post("/api/model_run/", data, format="json")
         self.assertEqual(res.status_code, 201)
 
+        # check if the model and the BAU model is created
+        self.assertEqual(models.ModelRun.objects.filter(name="BAU model").count(), 1)
+
         # switch to test user 2
         token = Token.objects.get(user__username='test_user2')
         client_logged_in = APIClient()
@@ -308,6 +309,9 @@ class APITestCase(TestCase):
 
         res = client_logged_in.post("/api/model_run/", data, format="json")
         self.assertEqual(res.status_code, 201)
+
+        # check if the model and the BAU model is created; it should not because we already have one
+        self.assertEqual(models.ModelRun.objects.filter(name="BAU model").count(), 1)
 
     def test_model_run_delete(self):
         """
