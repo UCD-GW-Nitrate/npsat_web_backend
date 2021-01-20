@@ -184,15 +184,6 @@ class ModelRun(models.Model):
 		modification side.
 	"""
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['flow_scenario', 'load_scenario', 'unsat_scenario'],
-                condition=models.Q(is_base=True),
-                name='unique_base_model_scenario'
-            ),
-        ]
-
     name = models.CharField(max_length=255, null=False, blank=False)
     description = models.TextField(null=True, blank=True)
 
@@ -246,7 +237,7 @@ class ModelRun(models.Model):
     # visibility to the public
     public = models.BooleanField(null=False, blank=False, default=False)
 
-    # whether current model is a base model for its scenario
+    # whether current model is a base model for its scenario; alias: BAU
     is_base = models.BooleanField(null=False, blank=False, default=False)
 
     # modifications - backward relationship

@@ -3,6 +3,9 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from rest_framework import serializers
 
 from npsat_manager import models
+from npsat_backend import local_settings
+from django.db.models import Q
+from django.contrib.auth.models import User
 
 
 class CropSerializer(serializers.ModelSerializer):
@@ -160,18 +163,59 @@ class RunResultSerializer(serializers.ModelSerializer):
 				  'reduction_start_year', 'reduction_end_year', 'is_base', 'results', 'n_wells', 'public',
 				  'load_scenario', 'flow_scenario', 'unsat_scenario')
 		depth = 0  # should mean that modifications get included in the initial request
+		extra_kwargs = {
+			"user": {
+				"required": False
+			}
+		}
 
 	def validate(self, data):
 		return data
 
 	def create(self, validated_data):
+		user = self.context["user"]
 		regions_data = validated_data.pop('regions')
 		modifications_data = validated_data.pop('modifications')
 		unsat_scenario = validated_data.pop('unsat_scenario')
 		load_scenario = validated_data.pop('load_scenario')
 		flow_scenario = validated_data.pop('flow_scenario')
 
+		# check if there is a BAU created
+		BAU_condition = Q()
+		BAU_condition &= Q(unsat_scenario__id=unsat_scenario['id'])
+		BAU_condition &= Q(flow_scenario__id=flow_scenario['id'])
+		BAU_condition &= Q(load_scenario__id=load_scenario['id'])
+		BAU_condition &= Q(is_base=True)
+		BAU_instances = models.ModelRun.objects.filter(BAU_condition)
+		for region in regions_data:
+			BAU_instances = BAU_instances.filter(regions__id=region['id'])
+
+		if BAU_instances.count() == 0:
+			# create BAU
+			service_bot = User.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
+			BAU_model = models.ModelRun.objects.create(
+				user=service_bot,
+				name="BAU model",  # TODO: generate a better name
+				description="This an automatically generated BAU model. Check model detail page for more information",
+				unsat_scenario=models.Scenario.objects.get(id=unsat_scenario['id']),
+				flow_scenario=models.Scenario.objects.get(id=flow_scenario['id']),
+				load_scenario=models.Scenario.objects.get(id=load_scenario['id']),
+				is_base=True,
+				public=True,
+				sim_end_year=2500,
+				reduction_start_year=2020,
+				reduction_end_year=2020,
+				status=models.ModelRun.READY
+			)
+			for region in regions_data:
+				BAU_model.regions.add(models.Region.objects.get(id=region['id']))
+			models.Modification.objects.create(model_run=BAU_model, proportion=1, crop=models.Crop.objects.get(
+				crop_type=models.Crop.ALL_OTHER_CROPS
+			))
+			BAU_model.save()
+
 		model_run = models.ModelRun.objects.create(**validated_data,
+												   user=user,
 												   unsat_scenario=models.Scenario.objects.get(id=unsat_scenario['id']),
 												   flow_scenario=models.Scenario.objects.get(id=flow_scenario['id']),
 												   load_scenario=models.Scenario.objects.get(id=load_scenario['id']),

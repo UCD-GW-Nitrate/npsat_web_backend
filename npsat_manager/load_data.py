@@ -5,6 +5,8 @@ import json
 from npsat_backend import settings
 
 from npsat_manager import models
+from django.contrib.auth.models import User
+from npsat_backend import local_settings
 
 data_folder = os.path.join(settings.BASE_DIR, "npsat_manager", "data")
 
@@ -14,6 +16,11 @@ def load_all(mantis_port_number=5941):
 	load_regions()
 	load_scenarios()
 	load_mantis_server(mantis_port_number=mantis_port_number)
+	load_system_admin_bot()
+
+
+def load_system_admin_bot():
+	User.objects.create(username=local_settings.ADMIN_BOT_USERNAME, password=local_settings.ADMIN_BOT_PASSWORD)
 
 
 def load_scenarios():

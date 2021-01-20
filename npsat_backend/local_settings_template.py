@@ -31,6 +31,11 @@ SERVER_EMAIL = ''  # what address does the email come from?
 MANTIS_STATUS_MESSAGE = "status"
 MANTIS_STATUS_RESPONSE = "online"
 
+# Admin bot
+# change the string in deployment
+ADMIN_BOT_USERNAME = "TEMPLATE_ADMIN_USERNAME"
+ADMIN_BOT_PASSWORD = "TEMPLATE_ADMIN_PASSWORD"
+
 StartYear = 1945  # When to start the curves off
 EndYear = 2065  # What's the max year to calculate until?
 ChangeYear = 2020  # When do we actually start trying to get a reduction?
