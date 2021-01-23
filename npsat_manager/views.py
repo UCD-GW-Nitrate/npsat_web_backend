@@ -204,18 +204,16 @@ class ModelRunViewSet(viewsets.ModelViewSet):
 		include_base = self.request.query_params.get("includeBase", False)
 		base_model = None
 		if include_base and not instance.is_base:
-			try:
-				base_model = models.ModelRun.objects.filter(
-					flow_scenario=instance.flow_scenario,
-					unsat_scenario=instance.unsat_scenario,
-					load_scenario=instance.load_scenario,
-					is_base=True
-				)
-				for region in instance.regions.all():
-					base_model = base_model.filter(regions=region)
+			base_model = models.ModelRun.objects.filter(
+				flow_scenario=instance.flow_scenario,
+				unsat_scenario=instance.unsat_scenario,
+				load_scenario=instance.load_scenario,
+				is_base=True
+			)
+			for region in instance.regions.all():
+				base_model = base_model.filter(regions=region)
+			if len(base_model) != 0:
 				base_model = base_model[0]
-			except models.ModelRun.DoesNotExist:
-				base_model = None
 		if base_model:
 			serializer = self.get_serializer([instance, base_model], many=True)
 		else:
