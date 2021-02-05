@@ -408,27 +408,30 @@ class MantisServer(models.Model):
         s.connect((self.host, self.port))
         # mantis_reader, mantis_writer = asyncio.open_connection(server.host, server.port)
         # log.debug("Connected successfully")
-
         command_string = model_run.input_message
         log.info("Command String is: {}".format(command_string))
         s.send(command_string.encode('utf-8'))
-
         # s.flush()
         # mantis_writer.drain()  # make sure the full command is sent before proceeding with this function
-
         results = b""
-        while True:
+        iter = 0
+        while iter < 10000:
             results += s.recv(99999999)  # receive a chunk
-            if results.endswith(b"ENDofMSG\n"):  # if Mantis says it finished and closed it, then break - otherwise get another chunk
+            if results.endswith(
+                    b"ENDofMSG\n"):  # if Mantis says it finished and closed it, then break - otherwise get another chunk
                 break
-
+            if results.startswith(b"0"):
+                # Houston, we have a problem - some kind of error message, but it *won't* end with ENDofMSG, so we need to check
+                break
+            iter += 1
+        else:
+            log.warning("Waiting for Mantis too many times - it's likely that runs are failing")
         process_results(results, model_run)
         # model_run.result_values = str(results)
         if model_run.status != ModelRun.ERROR:  # if it wasn't already marked as an error
             model_run.status = ModelRun.COMPLETED
             model_run.date_completed = arrow.utcnow().datetime
             model_run.save()
-
         log.info("Results saved")
 
 
@@ -443,16 +446,14 @@ def process_results(results, model_run):
     # status_message = "Client sent hello message\n"
     # if results.startswith(status_message):
     # 	results = results[len(status_message):]  # if it starts with a status message, remove it
-
     results_values = results.split(b" ")
-    if results_values[0] == "0":  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
+    if results_values[0] == b"0":  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
         model_run.status_message = results_values
+        log.error(f"Mantis Error: {results}")
         model_run.status = ModelRun.ERROR
         model_run.save()
         return
-
     # otherwise, Mantis ran, so let's process everything
-
     # slice off any blanks
     results_values = [value for value in results_values if value not in (
         b"", b"\n")]  # drop any extra empty values we got because they make the total number go off
@@ -460,7 +461,6 @@ def process_results(results, model_run):
     n_years = int(results_values[2])
     results_values = results_values[
                      3:-1]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
-
     # we need to have a number of results divisible by the number of wells and the number of years, so do some checks
     if len(results_values) % n_years != 0 or (len(results_values) / model_run.n_wells) != n_years:
         error_message = "Got an incorrect number of results from model run. Cannot reliably process to percentiles. You may try again"
@@ -468,13 +468,11 @@ def process_results(results, model_run):
         model_run.status_message = error_message
         log.error(error_message)  # log it as an error too so it goes to all the appropriate handlers
         return
-
     # OK, now we should be safe to proceed
     # we're going to make a 2 dimensional numpy array where every row is a well and every column is a year
     # start by making it a numpy array and convert to float by default
     results_array = numpy.array(results_values, dtype=numpy.float)
     results_2d = results_array.reshape(model_run.n_wells, n_years)
-
     # get the percentiles - when a percentile would be between 2 values, get the nearest actual value in the dataset
     # instead of interpolating between them, mostly because numpy throws errors when we try that.
     # skip all nan in the mantis output
@@ -483,5 +481,4 @@ def process_results(results, model_run):
         current_percentiles = json.dumps(
             percentiles[index].tolist())  # coerce from numpy to list, then dump as JSON to a string
         ResultPercentile(model=model_run, percentile=percentile, values=current_percentiles).save()
-
     model_run.save()
