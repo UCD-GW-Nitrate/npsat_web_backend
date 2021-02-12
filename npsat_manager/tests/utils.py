@@ -237,7 +237,7 @@ def load_default_model_runs():
         2. common resources must be loaded before this function
         3. After running the function:
             admin user has 3 BAU
-            test_user1 has 1 public and 1 private user
+            test_user1 has 1 public and 1 private model
             others don't have any models
     """
 

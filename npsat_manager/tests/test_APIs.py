@@ -384,6 +384,47 @@ class APITestCase(TestCase):
         res = client_logged_in.put("/api/model_run/{}/".format(private_model_run.id), data, format="json")
         self.assertEqual(res.status_code, 404)
 
+    def test_model_status(self):
+        """
+        Test the endpoint to get model status by giving ids
+        """
+
+        # test with non login user
+        client_no_login = APIClient()
+        model_id_1 = models.ModelRun.objects.get(id=1)
+        model_id_2 = models.ModelRun.objects.get(id=2)
+        model_id_3 = models.ModelRun.objects.get(id=3)
+
+        # test access
+        model_ids = ",".join(["1", "2", "3"])
+        res = client_no_login.get("/api/model_run__status/?ids={}".format(model_ids), format="json")
+        self.assertEqual(res.status_code, 401)
+
+        # test with logged in user to change other users' models
+        token = Token.objects.get(user__username='test_user1')
+        client_logged_in = APIClient()
+        client_logged_in.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+        res = client_logged_in.get("/api/model_run__status/?ids={}".format(model_ids), format="json")
+        self.assertEqual(res.status_code, 200)
+
+        # test without required params
+        res = client_logged_in.get("/api/model_run__status/", format="json")
+        self.assertEqual(res.status_code, 400)
+
+        # test output
+        res = client_logged_in.get("/api/model_run__status/?ids={}".format(model_ids), format="json")
+        self.assertEqual(res.status_code, 200)
+        test_data = [model_id_1, model_id_2, model_id_3]
+        for i in range(len(test_data)):
+            self.assertEqual(test_data[i].name, res.data["results"][i]["name"])
+            self.assertEqual(test_data[i].id, res.data["results"][i]["id"])
+            self.assertEqual(test_data[i].status, res.data["results"][i]["status"])
+
+        # test model DNE
+        res = client_logged_in.get("/api/model_run__status/?ids={}".format("6"), format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(-1, res.data["results"][0]["status"])
+
 
 class StimulationAPITest(TestCase):
     """

@@ -11,6 +11,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from django.db.models import Q
 from rest_framework import status
+from django.http import HttpResponse
 
 
 class CustomAuthToken(ObtainAuthToken):
@@ -101,6 +102,59 @@ class FeedOnDashboard(APIView):
 		})
 
 
+class GetModelStatus(APIView):
+	"""
+	the API endpoints for getting model status
+
+	This API endpoint is specially design for only getting model status
+
+	"""
+	permission_classes = [IsAuthenticated]
+	http_method_names = ["get"]
+
+	def get(self, request):
+		"""
+		return a list of model status or a single model status
+
+		Required parameter:
+			ids: a string list of model ids. Eg. 1,10,14,25
+		Response:
+			status: an array of model status
+		=======
+		If the required parameters are not provided, error code 404 will be returned.
+
+		For detailed model status types, check @class ModelRun: status.
+		The additional constant: "Not found" : -1
+		"""
+		MODEL_NOT_FOUND = -1
+		model_ids = self.request.query_params.get("ids", False)
+		if not model_ids:
+			return HttpResponse(status=400)
+		else:
+			model_ids = model_ids.split(",")
+		results = []
+		for model_id in model_ids:
+			try:
+				model = models.ModelRun.objects.get(id=model_id)
+				results.append({
+					"name": model.name,
+					"id": int(model_id),
+					"status": model.status
+				} if model.is_base or model.public or model.user == self.request.user else
+							{
+					"name": model.name,
+					"id": int(model_id),
+					"status": MODEL_NOT_FOUND
+				})
+			except models.ModelRun.DoesNotExist:
+				results.append({
+					"id": int(model_id),
+					"status": MODEL_NOT_FOUND
+				})
+
+		return Response({"results": results})
+
+
 class ScenarioViewSet(viewsets.ModelViewSet):
 	"""
 	scenario name
@@ -164,8 +218,6 @@ class RegionViewSet(viewsets.ModelViewSet):
 class ModelRunViewSet(viewsets.ModelViewSet):
 	"""
 	Create, List, and Modify Model Runs
-
-	Test
 
 	Permissions: Must be authenticated
 

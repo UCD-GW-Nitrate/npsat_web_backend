@@ -56,6 +56,9 @@ urlpatterns = [
     # dashboard feed
     url(r'^api/feed/', views.FeedOnDashboard.as_view()),
 
+    # model status
+    url(r'^api/model_run__status/', views.GetModelStatus.as_view()),
+
     # DRF docs from drf-yasg
     #url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     #url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
