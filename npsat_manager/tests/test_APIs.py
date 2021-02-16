@@ -352,7 +352,7 @@ class APITestCase(TestCase):
         res = client_logged_in.delete("/api/model_run/{}/".format(public_model_run.id))
         self.assertEqual(res.status_code, 204)
 
-    def test_model_update(self):
+    def test_model_run_update(self):
         """
         Test updating model
         This endpoint is mainly used for publishing the model
@@ -384,7 +384,7 @@ class APITestCase(TestCase):
         res = client_logged_in.put("/api/model_run/{}/".format(private_model_run.id), data, format="json")
         self.assertEqual(res.status_code, 404)
 
-    def test_model_status(self):
+    def test_model_run_status(self):
         """
         Test the endpoint to get model status by giving ids
         """
@@ -421,6 +421,7 @@ class APITestCase(TestCase):
             self.assertEqual(test_data[i].status, res.data["results"][i]["status"])
 
         # test model DNE
+        # we don't have model with id 6
         res = client_logged_in.get("/api/model_run__status/?ids={}".format("6"), format="json")
         self.assertEqual(res.status_code, 200)
         self.assertEqual(-1, res.data["results"][0]["status"])
