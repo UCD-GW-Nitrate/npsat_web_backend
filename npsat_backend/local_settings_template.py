@@ -3,14 +3,16 @@ import os
 from .databases import DATABASES
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'MAKE_ME_A_SAFE_CRYPTOGRAPHICALLY_SECURE_SEED_VALUE'
+SECRET_KEY = "MAKE_ME_A_SAFE_CRYPTOGRAPHICALLY_SECURE_SEED_VALUE"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-LOGGING_FOLDER = os.path.join(BASE_DIR) if DEBUG else os.path.join(BASE_DIR, "..", "logs")
+LOGGING_FOLDER = (
+    os.path.join(BASE_DIR) if DEBUG else os.path.join(BASE_DIR, "..", "logs")
+)
 
 ADMINS = []
 
@@ -18,12 +20,12 @@ SERVE_ADDRESS = "*:8010"  # what address and port should we serve the site on
 ALLOWED_HOSTS = []
 
 # EMAIL SENDING SETTINGS
-EMAIL_HOST = 'smtp.gmail.com'  # email server
+EMAIL_HOST = "smtp.gmail.com"  # email server
 EMAIL_PORT = 587
-EMAIL_HOST_USER = ''  # email server username
-EMAIL_HOST_PASSWORD = ''  # email server password
+EMAIL_HOST_USER = ""  # email server username
+EMAIL_HOST_PASSWORD = ""  # email server password
 EMAIL_USE_TLS = True
-SERVER_EMAIL = ''  # what address does the email come from?
+SERVER_EMAIL = ""  # what address does the email come from?
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases

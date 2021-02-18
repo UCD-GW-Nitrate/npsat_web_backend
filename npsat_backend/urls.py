@@ -22,10 +22,11 @@ from npsat_manager import views
 
 from rest_framework import permissions
 from rest_framework.schemas import get_schema_view as drf_get_schema_view
-#from drf_yasg.views import get_schema_view
-#from drf_yasg import openapi
 
-#schema_view = get_schema_view(
+# from drf_yasg.views import get_schema_view
+# from drf_yasg import openapi
+
+# schema_view = get_schema_view(
 #   openapi.Info(
 #      title="NPSAT/Mantis API",
 #      default_version='v1',
@@ -36,38 +37,40 @@ from rest_framework.schemas import get_schema_view as drf_get_schema_view
 #   ),
 #   public=True,
 #   permission_classes=(permissions.IsAuthenticatedOrReadOnly,),
-#)
+# )
 
 # set up DRF
 router = routers.DefaultRouter()
-router.register(r'crop', views.CropViewSet, basename="Crop")
-router.register(r'region', views.RegionViewSet, basename="Region")
-router.register(r'model_run', views.ModelRunViewSet, basename="ModelRun")
-router.register(r'modification', views.ModificationViewSet, basename="Modification")
-router.register(r'scenario', views.ScenarioViewSet, basename="Scenario")
-router.register(r'model_result', views.ResultPercentileViewSet, basename="ResultPercentile")
+router.register(r"crop", views.CropViewSet, basename="Crop")
+router.register(r"region", views.RegionViewSet, basename="Region")
+router.register(r"model_run", views.ModelRunViewSet, basename="ModelRun")
+router.register(r"modification", views.ModificationViewSet, basename="Modification")
+router.register(r"scenario", views.ScenarioViewSet, basename="Scenario")
+router.register(
+    r"model_result", views.ResultPercentileViewSet, basename="ResultPercentile"
+)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    url(r'^api/', include(router.urls)),
-    url(r'^api-token-auth/', views.CustomAuthToken.as_view()),  # POST a username and password here, get a token back
-    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-
+    path("admin/", admin.site.urls),
+    url(r"^api/", include(router.urls)),
+    url(
+        r"^api-token-auth/", views.CustomAuthToken.as_view()
+    ),  # POST a username and password here, get a token back
+    url(r"^api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     # dashboard feed
-    url(r'^api/feed/', views.FeedOnDashboard.as_view()),
-
+    url(r"^api/feed/", views.FeedOnDashboard.as_view()),
     # model status
-    url(r'^api/model_run__status/', views.GetModelStatus.as_view()),
-
+    url(r"^api/model_run__status/", views.GetModelStatus.as_view()),
     # DRF docs from drf-yasg
-    #url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    #url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    #url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-
+    # url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    # url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    # url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     # DRF schema directly from DRF
-    path('openapi', drf_get_schema_view(
-        title="Your Project",
-        description="API for all things …",
-        version="1.0.0"
-    ), name='openapi-schema'),
+    path(
+        "openapi",
+        drf_get_schema_view(
+            title="Your Project", description="API for all things …", version="1.0.0"
+        ),
+        name="openapi-schema",
+    ),
 ]
