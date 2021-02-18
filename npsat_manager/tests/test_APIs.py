@@ -356,6 +356,11 @@ class APITestCase(TestCase):
         # check if the model and the BAU model is created; it should not because we already have one
         self.assertEqual(models.ModelRun.objects.filter(name="BAU model").count(), 1)
 
+        # test with empty modifications
+        data["modifications"] = []
+        res = client_logged_in.post("/api/model_run/", data, format="json")
+        self.assertEqual(res.status_code, 201)
+
     def test_model_run_delete(self):
         """
         Test model run deletion(single)
