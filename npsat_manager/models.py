@@ -22,19 +22,20 @@ log = logging.getLogger("npsat.manager")
 
 class PercentileAggregate(models.Aggregate):
     """
-        I'm pretty sure we aren't using this and I'm just saving it in case we want to adapt it
+    I'm pretty sure we aren't using this and I'm just saving it in case we want to adapt it
     """
-    function = 'PERCENTILE_CONT'
-    name = 'pct'
+
+    function = "PERCENTILE_CONT"
+    name = "pct"
     output = models.FloatField()
-    template = 'percentile_cont(0.5) WITHIN GROUP (ORDER BY year asc)'
+    template = "percentile_cont(0.5) WITHIN GROUP (ORDER BY year asc)"
 
 
 class SimpleJSONField(models.TextField):
     """
-		converts dicts to JSON strings on save and converts JSON to dicts
-		on load
-	"""
+    converts dicts to JSON strings on save and converts JSON to dicts
+    on load
+    """
 
     def get_prep_value(self, value):
         if type(value) in (str, bytes):
@@ -53,10 +54,10 @@ class Crop(models.Model):
     GENERAL_CROP = 2
     ALL_OTHER_CROPS = 3
     CROP_TYPES = [
-        (SWAT_CROP, 'SWAT'),
-        (GNLM_CROP, 'GNLM'),
-        (GENERAL_CROP, 'BOTH'),
-        (ALL_OTHER_CROPS, 'Special identifier of all other crops')
+        (SWAT_CROP, "SWAT"),
+        (GNLM_CROP, "GNLM"),
+        (GENERAL_CROP, "BOTH"),
+        (ALL_OTHER_CROPS, "Special identifier of all other crops"),
     ]
 
     name = models.CharField(max_length=255)
@@ -64,7 +65,9 @@ class Crop(models.Model):
     swat_code = models.PositiveSmallIntegerField(null=True, blank=True)
     crop_type = models.PositiveSmallIntegerField(choices=CROP_TYPES)
     # groups reverse relationship
-    similar_crops = models.ManyToManyField("Crop", blank=True, related_name="similar_backward")
+    similar_crops = models.ManyToManyField(
+        "Crop", blank=True, related_name="similar_backward"
+    )
     active_in_mantis = models.BooleanField(default=True)
 
     def __str__(self):
@@ -73,22 +76,23 @@ class Crop(models.Model):
 
 class CropGroup(models.Model):
     """
-		Crop Groups aggregate crops, such as level 1 and 2
-		during Delta ET study. Here, groups are arbitrary,
-		and so are the levels. Levels let you find all the groups
-		in a certain level so that the groups are themselves
-		grouped into a useful unit by which you can find
-		all the crops in some grouping scheme
-	"""
+    Crop Groups aggregate crops, such as level 1 and 2
+    during Delta ET study. Here, groups are arbitrary,
+    and so are the levels. Levels let you find all the groups
+    in a certain level so that the groups are themselves
+    grouped into a useful unit by which you can find
+    all the crops in some grouping scheme
+    """
+
     crops = models.ManyToManyField(to=Crop, related_name="groups")
     level = models.CharField(max_length=255)
 
 
 class Region(models.Model):
     """
-		Used for the various location models - this will let us have a groupings class
-		that can be used for any of the locations
-	"""
+    Used for the various location models - this will let us have a groupings class
+    that can be used for any of the locations
+    """
 
     # macros for region_type
     CENTRAL_VALLEY = 0
@@ -105,7 +109,7 @@ class Region(models.Model):
         (B118_BASIN, "b118 basins"),
         (COUNTY, "County"),
         (TOWNSHIPS, "Townships"),
-        (C2V_SIM_SUBREGIONS, "C2VsimSubregions")
+        (C2V_SIM_SUBREGIONS, "C2VsimSubregions"),
     ]
     REGION_TYPE_MANTIS = {
         CENTRAL_VALLEY: "CentralValley",
@@ -114,15 +118,19 @@ class Region(models.Model):
         B118_BASIN: "B118",
         TOWNSHIPS: "Townships",
         CVHM_FARM: "CVHMfarms",
-        C2V_SIM_SUBREGIONS: "C2VsimSubregions"
+        C2V_SIM_SUBREGIONS: "C2VsimSubregions",
     }
 
     mantis_id = models.CharField(null=True, max_length=255)
     name = models.CharField(max_length=255)
-    active_in_mantis = models.BooleanField(default=True)  # Is this region actually ready to be selected?
+    active_in_mantis = models.BooleanField(
+        default=True
+    )  # Is this region actually ready to be selected?
     geometry = SimpleJSONField(null=True, blank=True)  #
     external_id = models.CharField(null=True, max_length=255, blank=True)
-    region_type = models.PositiveSmallIntegerField(choices=REGION_TYPE)  # is it a county, a B118 Basin, etc? we'll need to have some kind of code for this
+    region_type = models.PositiveSmallIntegerField(
+        choices=REGION_TYPE
+    )  # is it a county, a B118 Basin, etc? we'll need to have some kind of code for this
 
     def __str__(self):
         return self.name
@@ -130,8 +138,9 @@ class Region(models.Model):
 
 class Scenario(models.Model):
     """
-		scenario table, used during model run creation
-	"""
+    scenario table, used during model run creation
+    """
+
     # macros for scenario type
     TYPE_FLOW = 1
     TYPE_UNSAT = 2
@@ -139,25 +148,25 @@ class Scenario(models.Model):
     SCENARIO_TYPE = [
         (TYPE_FLOW, "flowScen"),
         (TYPE_UNSAT, "unsatScen"),
-        (TYPE_LOAD, "loadScen")
+        (TYPE_LOAD, "loadScen"),
     ]
 
     # macros for crop used
     GNLM_CROP = 0
     SWAT_CROP = 1
-    CROP_CODE_TYPE = [
-        (GNLM_CROP, "caml_code"),
-        (SWAT_CROP, "swat_code")
-    ]
+    CROP_CODE_TYPE = [(GNLM_CROP, "caml_code"), (SWAT_CROP, "swat_code")]
 
     name = models.CharField(max_length=255, null=False, blank=False)
     active_in_mantis = models.BooleanField(default=True)
     description = models.TextField(null=True, blank=True)
     scenario_type = models.PositiveSmallIntegerField(choices=SCENARIO_TYPE)
-    crop_code_field = models.PositiveSmallIntegerField(choices=CROP_CODE_TYPE, blank=True, null=True)
+    crop_code_field = models.PositiveSmallIntegerField(
+        choices=CROP_CODE_TYPE, blank=True, null=True
+    )
 
     def __str__(self):
         return self.name
+
 
 # class AreaGroup(models.Model):
 """
@@ -174,15 +183,16 @@ class Scenario(models.Model):
 # We should create the following API endpoint to get the percentiles
 # /api/percentile/
 # {
-#	percentiles = [5,15,85,95],
-#	model_run = 27
+# 	percentiles = [5,15,85,95],
+# 	model_run = 27
 # }
+
 
 class ModelRun(models.Model):
     """
-		The central object for configuring an individual run of the model - is related to modification objects from the
-		modification side.
-	"""
+    The central object for configuring an individual run of the model - is related to modification objects from the
+    modification side.
+    """
 
     name = models.CharField(max_length=255, null=False, blank=False)
     description = models.TextField(null=True, blank=True)
@@ -195,23 +205,32 @@ class ModelRun(models.Model):
     COMPLETED = 3
     ERROR = 4
     STATUS_CHOICE = [
-        (NOT_READY, 'not ready'),
-        (READY, 'ready'),
-        (RUNNING, 'running'),
-        (COMPLETED, 'completed'),
-        (ERROR, 'error'),
+        (NOT_READY, "not ready"),
+        (READY, "ready"),
+        (RUNNING, "running"),
+        (COMPLETED, "completed"),
+        (ERROR, "error"),
     ]
     status = models.IntegerField(default=NOT_READY, choices=STATUS_CHOICE, null=False)
 
-    status_message = models.CharField(max_length=2048, default="", null=True,
-                                      blank=True)  # for status info or error messages
-    result_values = models.TextField(validators=[int_list_validator], default="", null=True, blank=True)
-    date_submitted = models.DateTimeField(default=django.utils.timezone.now, null=True, blank=True)
+    status_message = models.CharField(
+        max_length=2048, default="", null=True, blank=True
+    )  # for status info or error messages
+    result_values = models.TextField(
+        validators=[int_list_validator], default="", null=True, blank=True
+    )
+    date_submitted = models.DateTimeField(
+        default=django.utils.timezone.now, null=True, blank=True
+    )
     date_completed = models.DateTimeField(null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name="model_runs")
+    user = models.ForeignKey(
+        User, on_delete=models.DO_NOTHING, related_name="model_runs"
+    )
 
     # global model parameters
-    unsaturated_zone_travel_time = models.DecimalField(max_digits=18, decimal_places=8, null=True, blank=True)
+    unsaturated_zone_travel_time = models.DecimalField(
+        max_digits=18, decimal_places=8, null=True, blank=True
+    )
 
     # model will be run on these regions
     regions = models.ManyToManyField(Region, related_name="model_runs")
@@ -224,12 +243,24 @@ class ModelRun(models.Model):
 
     # scenarios
     # here we use explicit fields and set a limit to each
-    flow_scenario = models.ForeignKey(Scenario, on_delete=models.DO_NOTHING, related_name="model_runs_flow",
-                                      limit_choices_to={'scenario_type': Scenario.TYPE_FLOW})
-    load_scenario = models.ForeignKey(Scenario, on_delete=models.DO_NOTHING, related_name="model_runs_load",
-                                      limit_choices_to={'scenario_type': Scenario.TYPE_LOAD})
-    unsat_scenario = models.ForeignKey(Scenario, on_delete=models.DO_NOTHING, related_name="model_runs_unsat",
-                                       limit_choices_to={'scenario_type': Scenario.TYPE_UNSAT})
+    flow_scenario = models.ForeignKey(
+        Scenario,
+        on_delete=models.DO_NOTHING,
+        related_name="model_runs_flow",
+        limit_choices_to={"scenario_type": Scenario.TYPE_FLOW},
+    )
+    load_scenario = models.ForeignKey(
+        Scenario,
+        on_delete=models.DO_NOTHING,
+        related_name="model_runs_load",
+        limit_choices_to={"scenario_type": Scenario.TYPE_LOAD},
+    )
+    unsat_scenario = models.ForeignKey(
+        Scenario,
+        on_delete=models.DO_NOTHING,
+        related_name="model_runs_unsat",
+        limit_choices_to={"scenario_type": Scenario.TYPE_UNSAT},
+    )
 
     # resulting metadata from mantis
     n_wells = models.IntegerField(null=True, blank=True)
@@ -248,9 +279,9 @@ class ModelRun(models.Model):
 
     def run(self):
         """
-			Runs Mantis and sets the status codes. Saves automatically at the end
-		:return:
-		"""
+                Runs Mantis and sets the status codes. Saves automatically at the end
+        :return:
+        """
         try:
             # TODO: Fix below
             results = None  # mantis.run_mantis(self.modifications.all())
@@ -258,7 +289,9 @@ class ModelRun(models.Model):
             self.status = self.COMPLETED
             self.status_message = "Successfully run"
         except:
-            log.error("Failed to run Mantis. Error was: {}".format(traceback.format_exc()))
+            log.error(
+                "Failed to run Mantis. Error was: {}".format(traceback.format_exc())
+            )
             self.status = self.ERROR
             self.status_message = "Model run failed. This error has been reported."
 
@@ -274,7 +307,9 @@ class ModelRun(models.Model):
         msg += f" unsatScen {self.unsat_scenario.name}"
         msg += f" unsatWC {self.water_content}"
 
-        regions = list(self.regions.all())  # coercing to list so I can get the type of the first one - we'll use them all in a moment anyway
+        regions = list(
+            self.regions.all()
+        )  # coercing to list so I can get the type of the first one - we'll use them all in a moment anyway
         msg += f" bMap {Region.REGION_TYPE_MANTIS[regions[0].region_type]}"
         msg += f" Nregions {len(regions)}"
         for region in regions:
@@ -294,7 +329,9 @@ class ModelRun(models.Model):
                 explicit_modifications[modification.crop.id] = modification.proportion
 
         # retrieve all crop within this load scen
-        crop_list = [Crop.GENERAL_CROP, ]
+        crop_list = [
+            Crop.GENERAL_CROP,
+        ]
         if int(self.load_scenario.crop_code_field) == Scenario.GNLM_CROP:
             crop_list.append(Crop.GNLM_CROP)
         elif int(self.load_scenario.crop_code_field) == Scenario.SWAT_CROP:
@@ -305,7 +342,7 @@ class ModelRun(models.Model):
 
         ### TEMPORARY
         #
-        #crop_code_field = "caml_code"
+        # crop_code_field = "caml_code"
         #
         ### TEMPORARY
 
@@ -313,14 +350,18 @@ class ModelRun(models.Model):
             if crop.id in explicit_modifications:
                 msg += f" {int(getattr(crop, crop_code_field))} {explicit_modifications[crop.id]}"
             else:
-                msg += f" {getattr(crop, crop_code_field)} {explicit_modifications['All']}"
+                msg += (
+                    f" {getattr(crop, crop_code_field)} {explicit_modifications['All']}"
+                )
 
         msg += " ENDofMSG\n"
         return msg
 
 
 class ResultPercentile(models.Model):
-    model = models.ForeignKey(ModelRun, on_delete=models.CASCADE, related_name="results")
+    model = models.ForeignKey(
+        ModelRun, on_delete=models.CASCADE, related_name="results"
+    )
     percentile = models.IntegerField(null=False)
     values = SimpleJSONField()
 
@@ -343,22 +384,30 @@ class ResultLoading(models.Model):
 
 class Modification(models.Model):
     class Meta:
-        unique_together = ['model_run', 'crop']
+        unique_together = ["model_run", "crop"]
 
-    crop = models.ForeignKey(Crop, on_delete=models.DO_NOTHING, related_name="modifications")
-    proportion = models.DecimalField(max_digits=5,
-                                     decimal_places=4)  # the amount, relative to 2020 of nitrogen applied on these crops - 0 to 1
+    crop = models.ForeignKey(
+        Crop, on_delete=models.DO_NOTHING, related_name="modifications"
+    )
+    proportion = models.DecimalField(
+        max_digits=5, decimal_places=4
+    )  # the amount, relative to 2020 of nitrogen applied on these crops - 0 to 1
     # land_area_proportion = models.DecimalField(max_digits=5, decimal_places=4)
-    model_run = models.ForeignKey(ModelRun, null=True, blank=True, on_delete=models.CASCADE,
-                                  related_name="modifications")
+    model_run = models.ForeignKey(
+        ModelRun,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="modifications",
+    )
 
 
 class MantisServer(models.Model):
     """
-		We can configure a server pool by instantiating different versions of this model. On startup, a function willl
-		trigger each instance to determine if it is online and available, at which point when we go to send out tasks,
-		it will be available for use.
-	"""
+    We can configure a server pool by instantiating different versions of this model. On startup, a function willl
+    trigger each instance to determine if it is online and available, at which point when we go to send out tasks,
+    it will be available for use.
+    """
 
     host = models.CharField(max_length=255)
     port = models.PositiveSmallIntegerField(default=1234)
@@ -370,7 +419,9 @@ class MantisServer(models.Model):
         await stream_writer.drain()
 
         response = stream_reader.read()  # waits for an "EOF"
-        log.debug("Mantis server at {}:{} responded {}".format(self.host, self.port, response))
+        log.debug(
+            "Mantis server at {}:{} responded {}".format(self.host, self.port, response)
+        )
         if response == settings.MANTIS_STATUS_RESPONSE:
             self.online = True
         else:
@@ -384,10 +435,10 @@ class MantisServer(models.Model):
 
     def send_command(self, model_run: ModelRun):
         """
-			Sends commands to MantisServer and loads results back
-		:param model_run:
-		:return:
-		"""
+                Sends commands to MantisServer and loads results back
+        :param model_run:
+        :return:
+        """
         model_run.status = ModelRun.RUNNING
         model_run.save()
 
@@ -396,7 +447,9 @@ class MantisServer(models.Model):
             self._non_async_send(model_run)
         except:
             # on any exception, reset the state of this model run so it will be picked up again later
-            model_run.status = ModelRun.READY  # set it to ready on a generic failure so it tries again - we'll set it to error if it tells us to
+            model_run.status = (
+                ModelRun.READY
+            )  # set it to ready on a generic failure so it tries again - we'll set it to error if it tells us to
             model_run.save()
             raise
 
@@ -410,7 +463,7 @@ class MantisServer(models.Model):
         # log.debug("Connected successfully")
         command_string = model_run.input_message
         log.info("Command String is: {}".format(command_string))
-        s.send(command_string.encode('utf-8'))
+        s.send(command_string.encode("utf-8"))
         # s.flush()
         # mantis_writer.drain()  # make sure the full command is sent before proceeding with this function
         results = b""
@@ -418,17 +471,22 @@ class MantisServer(models.Model):
         while iter < 10000:
             results += s.recv(99999999)  # receive a chunk
             if results.endswith(
-                    b"ENDofMSG\n"):  # if Mantis says it finished and closed it, then break - otherwise get another chunk
+                b"ENDofMSG\n"
+            ):  # if Mantis says it finished and closed it, then break - otherwise get another chunk
                 break
             if results.startswith(b"0"):
                 # Houston, we have a problem - some kind of error message, but it *won't* end with ENDofMSG, so we need to check
                 break
             iter += 1
         else:
-            log.warning("Waiting for Mantis too many times - it's likely that runs are failing")
+            log.warning(
+                "Waiting for Mantis too many times - it's likely that runs are failing"
+            )
         process_results(results, model_run)
         # model_run.result_values = str(results)
-        if model_run.status != ModelRun.ERROR:  # if it wasn't already marked as an error
+        if (
+            model_run.status != ModelRun.ERROR
+        ):  # if it wasn't already marked as an error
             model_run.status = ModelRun.COMPLETED
             model_run.date_completed = arrow.utcnow().datetime
             model_run.save()
@@ -437,17 +495,19 @@ class MantisServer(models.Model):
 
 def process_results(results, model_run):
     """
-		Given the model results,
-	:param results:
-	:param model_run:
-	:return:
-	"""
+            Given the model results,
+    :param results:
+    :param model_run:
+    :return:
+    """
     # This line will only appeared if used provided Test Client
     # status_message = "Client sent hello message\n"
     # if results.startswith(status_message):
     # 	results = results[len(status_message):]  # if it starts with a status message, remove it
     results_values = results.split(b" ")
-    if results_values[0] == b"0":  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
+    if (
+        results_values[0] == b"0"
+    ):  # Yes, a string 0 because of parsing. It means Mantis failed, store the error message
         model_run.status_message = results_values
         log.error(f"Mantis Error: {results}")
         model_run.status = ModelRun.ERROR
@@ -455,18 +515,25 @@ def process_results(results, model_run):
         return
     # otherwise, Mantis ran, so let's process everything
     # slice off any blanks
-    results_values = [value for value in results_values if value not in (
-        b"", b"\n")]  # drop any extra empty values we got because they make the total number go off
+    results_values = [
+        value for value in results_values if value not in (b"", b"\n")
+    ]  # drop any extra empty values we got because they make the total number go off
     model_run.n_wells = int(results_values[1])
     n_years = int(results_values[2])
     results_values = results_values[
-                     3:-1]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
+        3:-1
+    ]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
     # we need to have a number of results divisible by the number of wells and the number of years, so do some checks
-    if len(results_values) % n_years != 0 or (len(results_values) / model_run.n_wells) != n_years:
+    if (
+        len(results_values) % n_years != 0
+        or (len(results_values) / model_run.n_wells) != n_years
+    ):
         error_message = "Got an incorrect number of results from model run. Cannot reliably process to percentiles. You may try again"
         model_run.status = ModelRun.ERROR
         model_run.status_message = error_message
-        log.error(error_message)  # log it as an error too so it goes to all the appropriate handlers
+        log.error(
+            error_message
+        )  # log it as an error too so it goes to all the appropriate handlers
         return
     # OK, now we should be safe to proceed
     # we're going to make a 2 dimensional numpy array where every row is a well and every column is a year
@@ -476,9 +543,14 @@ def process_results(results, model_run):
     # get the percentiles - when a percentile would be between 2 values, get the nearest actual value in the dataset
     # instead of interpolating between them, mostly because numpy throws errors when we try that.
     # skip all nan in the mantis output
-    percentiles = numpy.nanpercentile(results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0)
+    percentiles = numpy.nanpercentile(
+        results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+    )
     for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
         current_percentiles = json.dumps(
-            percentiles[index].tolist())  # coerce from numpy to list, then dump as JSON to a string
-        ResultPercentile(model=model_run, percentile=percentile, values=current_percentiles).save()
+            percentiles[index].tolist()
+        )  # coerce from numpy to list, then dump as JSON to a string
+        ResultPercentile(
+            model=model_run, percentile=percentile, values=current_percentiles
+        ).save()
     model_run.save()

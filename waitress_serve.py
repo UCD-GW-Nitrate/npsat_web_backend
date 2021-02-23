@@ -7,4 +7,6 @@ from waitress import serve
 from npsat_backend.wsgi import application
 from npsat_backend.local_settings import SERVE_ADDRESS
 
-serve(application, listen=SERVE_ADDRESS)  # serve the application! might not respond to termination signals
+serve(
+    application, listen=SERVE_ADDRESS
+)  # serve the application! might not respond to termination signals
