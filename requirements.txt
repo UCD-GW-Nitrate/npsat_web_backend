@@ -4,3 +4,4 @@ djangorestframework>=3.11
 django-cors-headers
 six
 waitress
+psycopg2
