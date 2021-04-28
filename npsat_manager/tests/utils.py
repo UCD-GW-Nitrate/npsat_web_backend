@@ -327,9 +327,9 @@ def load_default_model_runs():
     BAU_CV_GNLM = models.ModelRun.objects.create(
         user=admin,
         name="BAU Central Valley GNLM",
-        flow_scenario=models.Scenario.objects.get(name="CVHM_92_03_BUD0"),
-        load_scenario=models.Scenario.objects.get(name="GNLM"),
-        unsat_scenario=models.Scenario.objects.get(name="C2VSIM_SPRING_2015"),
+        flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
+        load_scenario=models.Scenario.objects.get(mantis_id="GNLM"),
+        unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
         is_base=True,
         status=models.ModelRun.COMPLETED,
     )
@@ -339,9 +339,9 @@ def load_default_model_runs():
     BAU_CV_SWAT1 = models.ModelRun.objects.create(
         user=admin,
         name="BAU Central Valley SWAT1",
-        flow_scenario=models.Scenario.objects.get(name="CVHM_92_03_BUD0"),
-        load_scenario=models.Scenario.objects.get(name="SWAT1"),
-        unsat_scenario=models.Scenario.objects.get(name="C2VSIM_SPRING_2015"),
+        flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
+        load_scenario=models.Scenario.objects.get(mantis_id="SWAT1"),
+        unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
         is_base=True,
     )
 
@@ -351,9 +351,9 @@ def load_default_model_runs():
     CV_test_user1_private = models.ModelRun.objects.create(
         user=test_user1,
         name="Central Valley SWAT1 private",
-        flow_scenario=models.Scenario.objects.get(name="CVHM_92_03_BUD0"),
-        load_scenario=models.Scenario.objects.get(name="SWAT1"),
-        unsat_scenario=models.Scenario.objects.get(name="C2VSIM_SPRING_2015"),
+        flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
+        load_scenario=models.Scenario.objects.get(mantis_id="SWAT1"),
+        unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
         is_base=False,
         public=False,
     )
@@ -363,9 +363,9 @@ def load_default_model_runs():
     CV_test_user1_public = models.ModelRun.objects.create(
         user=test_user1,
         name="Central Valley SWAT1 public",
-        flow_scenario=models.Scenario.objects.get(name="CVHM_92_03_BUD0"),
-        load_scenario=models.Scenario.objects.get(name="SWAT1"),
-        unsat_scenario=models.Scenario.objects.get(name="C2VSIM_SPRING_2015"),
+        flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
+        load_scenario=models.Scenario.objects.get(mantis_id="SWAT1"),
+        unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
         is_base=False,
         public=True,
     )

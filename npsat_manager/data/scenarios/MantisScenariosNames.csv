@@ -1,0 +1,9 @@
+Category,Code name,User friendly name,Short description,Long description,url
+Load Scenario,GNLM,GNLM,Generalized Nitrogen Loading Model,,http://ucd-cws.github.io/nitrates/
+Load Scenario,SWAT1,Baseline,,,
+Load Scenario,SWAT2,High Fertilization,,,
+Load Scenario,SWAT3,High Irrigation,,,
+Load Scenario,SWAT4,High Irrigation and High Fertilization,,,
+Unsaturated Scenario,C2VSIM_SPRING_2000,Dry season,Based on 2000 spring data from the C2Vsim fine grid model ,,gwt.ucdavis.edu
+Unsaturated Scenario,C2VSIM_SPRING_2015,Wet season,Based on 2015 spring data from the C2Vsim fine grid model,,gwt.ucdavis.edu
+Flow Scenario,C2VsimRun01Ref6,C2Vsim,Simulation based on C2Vsim average flow conditions. Each basin has been averaged on a different period,,gwt.ucdavis.edu

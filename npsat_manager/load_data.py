@@ -309,60 +309,28 @@ def enable_region_dev_data(enable_regions=("Central Valley",), all=False):
 
 
 def enable_scenario_dev_data():
-    models.Scenario(
-        name="CVHM_92_03_BUD0",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_FLOW,
-        description="Simulation based on CVHM average flow conditions for the period 10/1992"
-        " - 9/2003 where the pumping is reduced to match the recharge.",
-    ).save()
-    models.Scenario(
-        name="CVHM_92_03_BUD1",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_FLOW,
-        description="Simulation based on CVHM average flow conditions for the period 10/1992"
-        " - 9/2003 where the recharge is increased to match the pumping.",
-    ).save()
-
-    models.Scenario(
-        name="GNLM",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_LOAD,
-        crop_code_field=models.Scenario.GNLM_CROP,
-        description="The N loading is based on GNLM historic and future predictions. It covers a period "
-        "between 1945 - 2050 with 15 years increments.",
-    ).save()
-    models.Scenario(
-        name="SWAT1",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_LOAD,
-        crop_code_field=models.Scenario.SWAT_CROP,
-        description="Concentrations history (1990 - 2015) based on Baseline.",
-    ).save()
-    models.Scenario(
-        name="SWAT2",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_LOAD,
-        crop_code_field=models.Scenario.SWAT_CROP,
-        description="Concentrations history (1990 - 2015) based on High Fertilization.",
-    ).save()
-    models.Scenario(
-        name="SWAT3",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_LOAD,
-        crop_code_field=models.Scenario.SWAT_CROP,
-        description="Concentrations history (1990 - 2015) based on High Irrigation.",
-    ).save()
-    models.Scenario(
-        name="SWAT4",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_LOAD,
-        crop_code_field=models.Scenario.SWAT_CROP,
-        description="Concentrations history (1990 - 2015) based on High Fertilization and High Fertilization.",
-    ).save()
-
-    models.Scenario(
-        name="C2VSIM_SPRING_2015",
-        active_in_mantis=True,
-        scenario_type=models.Scenario.TYPE_UNSAT,
-    ).save()
+    scenarios_csv = os.path.join(data_folder, "scenarios", "MantisScenariosNames.csv")
+    with open(scenarios_csv, "r") as scenario_data:
+        scenario_list = csv.DictReader(scenario_data)
+        for scenario in scenario_list:
+            category = scenario["Category"]
+            crop_code_field = None
+            if category == "Load Scenario":
+                scenario_type = models.Scenario.TYPE_LOAD
+                if scenario["Code name"] == "GNLM":
+                    crop_code_field = models.Scenario.GNLM_CROP
+                else:
+                    crop_code_field = models.Scenario.SWAT_CROP
+            elif category == "Flow Scenario":
+                scenario_type = models.Scenario.TYPE_FLOW
+            else:
+                scenario_type = models.Scenario.TYPE_UNSAT
+            models.Scenario.objects.create(
+                name=scenario["User friendly name"],
+                mantis_id=scenario["Code name"],
+                description=scenario["Short description"],
+                long_description=scenario["Long description"],
+                external_url=scenario["url"],
+                scenario_type=scenario_type,
+                crop_code_field=crop_code_field
+            ).save()
