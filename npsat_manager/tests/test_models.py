@@ -163,16 +163,20 @@ class ModelRunTestCase(TestCase):
             ).save()
             # scenarios
             models.Scenario.objects.create(
-                name="SWAT",
+                name="test_scen_load",
+                mantis_id="test_scen_load",
                 scenario_type=models.Scenario.TYPE_LOAD,
-                crop_code_field=models.Scenario.SWAT_CROP,
+                crop_code_field=models.Scenario.SWAT_CROP
             ).save()
             models.Scenario.objects.create(
-                name="unsat",
+                name="test_scen_unsat",
+                mantis_id="test_scen_unsat",
                 scenario_type=models.Scenario.TYPE_UNSAT,
             ).save()
             models.Scenario.objects.create(
-                name="CVHM_2020", scenario_type=models.Scenario.TYPE_FLOW
+                name="test_scen_flow",
+                mantis_id="test_scen_flow",
+                scenario_type=models.Scenario.TYPE_FLOW,
             ).save()
             # crops
             models.Crop.objects.create(
@@ -228,8 +232,8 @@ class ModelRunTestCase(TestCase):
         model_run1.save()
         self.assertEqual(
             model_run1.input_message,
-            "endSimYear 2300 startRed 2020 endRed 2025 flowScen CVHM_2020 loadScen SWAT "
-            "unsatScen unsat unsatWC 0 bMap CentralValley Nregions 1 CentralValley "
+            "endSimYear 2300 startRed 2020 endRed 2025 flowScen test_scen_flow loadScen test_scen_load "
+            "unsatScen test_scen_unsat unsatWC 0 bMap CentralValley Nregions 1 CentralValley "
             "Ncrops 1 5 0.7000 ENDofMSG\n",
         )
 

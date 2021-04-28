@@ -129,8 +129,8 @@ class APITestCase(TestCase):
         Note:
             1. No create/delete operation by admin user is tested here
         """
-        SWAT_scen = models.Scenario.objects.get(name="SWAT1")
-        GNLM_scen = models.Scenario.objects.get(name="GNLM")
+        SWAT_scen = models.Scenario.objects.get(mantis_id="SWAT1")
+        GNLM_scen = models.Scenario.objects.get(mantis_id="GNLM")
         crop_type_list = [models.Crop.ALL_OTHER_CROPS, models.Crop.GENERAL_CROP]
         # test cases when user doesn't log in
         # It is only possible in the production to query crops based on type
@@ -314,9 +314,9 @@ class APITestCase(TestCase):
         crops = models.Crop.objects.filter(active_in_mantis=True)
         regions = models.Region.objects.filter(region_type=models.Region.CVHM_FARM)
         user1 = User.objects.get(username="test_user1")
-        flow_scen = models.Scenario.objects.get(name="CVHM_92_03_BUD0")
-        unsat_scen = models.Scenario.objects.get(name="GNLM")
-        load_scen = models.Scenario.objects.get(name="C2VSIM_SPRING_2015")
+        flow_scen = models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6")
+        unsat_scen = models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2000")
+        load_scen = models.Scenario.objects.get(mantis_id="GNLM")
         # test with non login user
         client_no_login = APIClient()
 

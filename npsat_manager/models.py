@@ -157,8 +157,11 @@ class Scenario(models.Model):
     CROP_CODE_TYPE = [(GNLM_CROP, "caml_code"), (SWAT_CROP, "swat_code")]
 
     name = models.CharField(max_length=255, null=False, blank=False)
+    mantis_id = models.CharField(max_length=255, null=False, blank=False)
     active_in_mantis = models.BooleanField(default=True)
     description = models.TextField(null=True, blank=True)
+    long_description = models.TextField(null=True, blank=True)
+    external_url = models.TextField(null=True, blank=True)
     scenario_type = models.PositiveSmallIntegerField(choices=SCENARIO_TYPE)
     crop_code_field = models.PositiveSmallIntegerField(
         choices=CROP_CODE_TYPE, blank=True, null=True
@@ -302,9 +305,9 @@ class ModelRun(models.Model):
         msg = f"endSimYear {str(self.sim_end_year)}"
         msg += f" startRed {self.reduction_start_year}"
         msg += f" endRed {self.reduction_end_year}"
-        msg += f" flowScen {self.flow_scenario.name}"
-        msg += f" loadScen {self.load_scenario.name}"
-        msg += f" unsatScen {self.unsat_scenario.name}"
+        msg += f" flowScen {self.flow_scenario.mantis_id}"
+        msg += f" loadScen {self.load_scenario.mantis_id}"
+        msg += f" unsatScen {self.unsat_scenario.mantis_id}"
         msg += f" unsatWC {self.water_content}"
 
         regions = list(
