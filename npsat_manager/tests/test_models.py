@@ -188,6 +188,11 @@ class ModelRunTestCase(TestCase):
                 active_in_mantis=False,
                 swat_code=9,
             ).save()
+            models.Crop.objects.create(
+                name="All other crops",
+                crop_type=models.Crop.ALL_OTHER_CROPS,
+                swat_code=10,
+            ).save()
             # default model run
             models.ModelRun.objects.create(
                 user=User.objects.get(username="user1"),
@@ -229,12 +234,17 @@ class ModelRunTestCase(TestCase):
                 crop=models.Crop.objects.get(name="grape"), proportion=0.7
             )
         )
+        model_run1.modifications.add(
+            models.Modification.objects.create(
+                crop=models.Crop.objects.get(crop_type=models.Crop.ALL_OTHER_CROPS), proportion=0.7
+            )
+        )
         model_run1.save()
         self.assertEqual(
             model_run1.input_message,
             "endSimYear 2300 startRed 2020 endRed 2025 flowScen test_scen_flow loadScen test_scen_load "
             "unsatScen test_scen_unsat unsatWC 0 bMap CentralValley Nregions 1 CentralValley "
-            "Ncrops 1 5 0.7000 ENDofMSG\n",
+            "Ncrops 2 -9 0.7000 5 0.7000 ENDofMSG\n",
         )
 
     def test_ModelRun_read(self):
@@ -310,5 +320,5 @@ class ModelRunTestCase(TestCase):
         )
         # check if assets(regions/scens...) are deleted
         self.assertEqual(len(models.Region.objects.all()), 2)
-        self.assertEqual(len(models.Crop.objects.all()), 2)
+        self.assertEqual(len(models.Crop.objects.all()), 3)
         self.assertEqual(len(models.Scenario.objects.all()), 3)

@@ -117,7 +117,7 @@ class Region(models.Model):
         COUNTY: "Counties",
         B118_BASIN: "B118",
         TOWNSHIPS: "Townships",
-        CVHM_FARM: "CVHMfarms",
+        CVHM_FARM: "Subregions",
         C2V_SIM_SUBREGIONS: "C2VsimSubregions",
     }
 
@@ -323,10 +323,11 @@ class ModelRun(models.Model):
 
         # use a hash map to store all explicit modifications
         explicit_modifications = {}
+        all_other_crop_value = None
         for modification in modifications:
             # all other crops
             if modification.crop.crop_type == Crop.ALL_OTHER_CROPS:
-                explicit_modifications["All"] = modification.proportion
+                all_other_crop_value = modification.proportion
             # other explicit crop selection
             else:
                 explicit_modifications[modification.crop.id] = modification.proportion
@@ -334,28 +335,29 @@ class ModelRun(models.Model):
         # retrieve all crop within this load scen
         crop_list = [
             Crop.GENERAL_CROP,
+            Crop.ALL_OTHER_CROPS
         ]
         if int(self.load_scenario.crop_code_field) == Scenario.GNLM_CROP:
             crop_list.append(Crop.GNLM_CROP)
         elif int(self.load_scenario.crop_code_field) == Scenario.SWAT_CROP:
             crop_list.append(Crop.SWAT_CROP)
 
-        all_crops_belonged_to_load_scen = Crop.objects.filter(crop_type__in=crop_list)
-        msg += f" Ncrops {len(list(all_crops_belonged_to_load_scen))}"
+        crops_belonged_to_load_scen = Crop.objects.filter(
+            crop_type__in=crop_list,
+            id__in=explicit_modifications.keys()
+        )
+        msg += f" Ncrops {len(list(crops_belonged_to_load_scen)) + 1}"
 
+        # add the default "-9" all other crops
+        msg += f" -9 {all_other_crop_value}"
         ### TEMPORARY
         #
         # crop_code_field = "caml_code"
         #
         ### TEMPORARY
 
-        for crop in all_crops_belonged_to_load_scen:
-            if crop.id in explicit_modifications:
-                msg += f" {int(getattr(crop, crop_code_field))} {explicit_modifications[crop.id]}"
-            else:
-                msg += (
-                    f" {getattr(crop, crop_code_field)} {explicit_modifications['All']}"
-                )
+        for crop in crops_belonged_to_load_scen:
+            msg += f" {int(getattr(crop, crop_code_field))} {explicit_modifications[crop.id]}"
 
         msg += " ENDofMSG\n"
         return msg
