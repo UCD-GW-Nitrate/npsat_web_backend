@@ -134,7 +134,7 @@ def load_farms():
 
     def farms_mantis_id_loader(data):
         dwr = data["dwr_sbrgns"]
-        return "Farm{}".format(dwr)
+        return "Subregion{}".format(dwr)
 
     field_map = (
         ("dwr_sbrgns", "external_id"),
@@ -208,7 +208,7 @@ def load_townships():
 
 def load_b118_basin():
     def b118_mantis_id_loader(data):
-        return data["BAS_SBBSN"].replace("-", "_")
+        return data["BAS_SBBSN"].replace("-", "_").replace(".", "_")
 
     b118_file = os.path.join(
         settings.BASE_DIR,
