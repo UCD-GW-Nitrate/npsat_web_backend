@@ -197,6 +197,10 @@ class RunResultSerializer(serializers.ModelSerializer):
             "load_scenario",
             "flow_scenario",
             "unsat_scenario",
+            "depth_range_min",
+            "depth_range_max",
+            "screen_length_range_min",
+            "screen_length_range_max"
         )
         depth = 0  # should mean that modifications get included in the initial request
         extra_kwargs = {"user": {"required": False}}
