@@ -222,6 +222,10 @@ class ModelRunTestCase(TestCase):
             unsat_scenario=models.Scenario.objects.get(
                 scenario_type=models.Scenario.TYPE_UNSAT
             ),
+            depth_range_max=350.22,
+            depth_range_min=20.11,
+            screen_length_range_max=100.00,
+            screen_length_range_min=0.876
         )
         model_run1.regions.add(models.Region.objects.get(name="Central Valley"))
         model_run1.modifications.add(
@@ -244,7 +248,7 @@ class ModelRunTestCase(TestCase):
             model_run1.input_message,
             "endSimYear 2300 startRed 2020 endRed 2025 flowScen test_scen_flow loadScen test_scen_load "
             "unsatScen test_scen_unsat unsatWC 0 bMap CentralValley Nregions 1 CentralValley "
-            "Ncrops 2 -9 0.7000 5 0.7000 ENDofMSG\n",
+            "Ncrops 2 -9 0.7000 5 0.7000 DepthRange 20.11 350.22 ScreenLenRange 0.876 100.0 ENDofMSG\n",
         )
 
     def test_ModelRun_read(self):
