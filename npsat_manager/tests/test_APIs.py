@@ -330,6 +330,8 @@ class APITestCase(TestCase):
             "unsat_scenario": {"id": unsat_scen.id},
             "flow_scenario": {"id": flow_scen.id},
             "load_scenario": {"id": load_scen.id},
+            "depth_range_max": 100.2,
+            "depth_range_min": 89.98
         }
         res = client_no_login.post("/api/model_run/", data, format="json")
         self.assertEqual(res.status_code, 401)

@@ -222,6 +222,10 @@ class ModelRunTestCase(TestCase):
             unsat_scenario=models.Scenario.objects.get(
                 scenario_type=models.Scenario.TYPE_UNSAT
             ),
+            depth_range_max=350.22,
+            depth_range_min=20.11,
+            screen_length_range_max=100.00,
+            screen_length_range_min=0.876
         )
         model_run1.regions.add(models.Region.objects.get(name="Central Valley"))
         model_run1.modifications.add(
