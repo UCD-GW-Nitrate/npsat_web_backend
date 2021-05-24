@@ -366,6 +366,13 @@ class ModelRun(models.Model):
         for crop in crops_belonged_to_load_scen:
             msg += f" {int(getattr(crop, crop_code_field))} {explicit_modifications[crop.id]}"
 
+        # add applied region filters
+        if self.depth_range_min is not None and self.depth_range_max is not None:
+            msg += f" DepthRange {str(self.depth_range_min)} {str(self.depth_range_max)}"
+
+        if self.screen_length_range_min is not None and self.screen_length_range_max is not None:
+            msg += f" ScreenLenRange {str(self.screen_length_range_min)} {str(self.screen_length_range_max)}"
+
         msg += " ENDofMSG\n"
         return msg
 

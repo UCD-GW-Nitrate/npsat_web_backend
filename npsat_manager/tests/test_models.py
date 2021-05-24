@@ -248,7 +248,7 @@ class ModelRunTestCase(TestCase):
             model_run1.input_message,
             "endSimYear 2300 startRed 2020 endRed 2025 flowScen test_scen_flow loadScen test_scen_load "
             "unsatScen test_scen_unsat unsatWC 0 bMap CentralValley Nregions 1 CentralValley "
-            "Ncrops 2 -9 0.7000 5 0.7000 ENDofMSG\n",
+            "Ncrops 2 -9 0.7000 5 0.7000 DepthRange 20.11 350.22 ScreenLenRange 0.876 100.0 ENDofMSG\n",
         )
 
     def test_ModelRun_read(self):
