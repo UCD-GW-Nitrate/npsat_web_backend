@@ -245,6 +245,8 @@ class ModelRun(models.Model):
     water_content = models.DecimalField(max_digits=5, decimal_places=4, default=0)
 
     # methods to narrow the simulation ranges
+    applied_simulation_filter = models.BooleanField(null=False, default=False, blank=False)
+
     depth_range_min = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
     depth_range_max = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
 
@@ -367,11 +369,12 @@ class ModelRun(models.Model):
             msg += f" {int(getattr(crop, crop_code_field))} {explicit_modifications[crop.id]}"
 
         # add applied region filters
-        if self.depth_range_min is not None and self.depth_range_max is not None:
-            msg += f" DepthRange {str(self.depth_range_min)} {str(self.depth_range_max)}"
+        if self.applied_simulation_filter:
+            if self.depth_range_min is not None and self.depth_range_max is not None:
+                msg += f" DepthRange {str(self.depth_range_min)} {str(self.depth_range_max)}"
 
-        if self.screen_length_range_min is not None and self.screen_length_range_max is not None:
-            msg += f" ScreenLenRange {str(self.screen_length_range_min)} {str(self.screen_length_range_max)}"
+            if self.screen_length_range_min is not None and self.screen_length_range_max is not None:
+                msg += f" ScreenLenRange {str(self.screen_length_range_min)} {str(self.screen_length_range_max)}"
 
         msg += " ENDofMSG\n"
         return msg

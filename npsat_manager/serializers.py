@@ -197,6 +197,7 @@ class RunResultSerializer(serializers.ModelSerializer):
             "load_scenario",
             "flow_scenario",
             "unsat_scenario",
+            "applied_simulation_filter",
             "depth_range_min",
             "depth_range_max",
             "screen_length_range_min",
