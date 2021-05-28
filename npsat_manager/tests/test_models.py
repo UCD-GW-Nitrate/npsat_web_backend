@@ -225,7 +225,8 @@ class ModelRunTestCase(TestCase):
             depth_range_max=350.22,
             depth_range_min=20.11,
             screen_length_range_max=100.00,
-            screen_length_range_min=0.876
+            screen_length_range_min=0.876,
+            applied_simulation_filter=True
         )
         model_run1.regions.add(models.Region.objects.get(name="Central Valley"))
         model_run1.modifications.add(
