@@ -247,9 +247,13 @@ class ModelRun(models.Model):
     # methods to narrow the simulation ranges
     applied_simulation_filter = models.BooleanField(null=False, default=False, blank=False)
 
+    # the range should be between 0 - 801;
+    # 801 is reserved for the maximum value possible, when passing to message to mantis, set it to 10000
     depth_range_min = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
     depth_range_max = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
 
+    # the range should be between 0 - 801;
+    # 801 is reserved for the maximum value possible, when passing to message to mantis, set it to 10000
     screen_length_range_max = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
     screen_length_range_min = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
 
@@ -371,10 +375,12 @@ class ModelRun(models.Model):
         # add applied region filters
         if self.applied_simulation_filter:
             if self.depth_range_min is not None and self.depth_range_max is not None:
-                msg += f" DepthRange {str(self.depth_range_min)} {str(self.depth_range_max)}"
+                range_max = str(self.depth_range_max) if self.depth_range_max != 801 else "10000"
+                msg += f" DepthRange {str(self.depth_range_min)} {range_max}"
 
             if self.screen_length_range_min is not None and self.screen_length_range_max is not None:
-                msg += f" ScreenLenRange {str(self.screen_length_range_min)} {str(self.screen_length_range_max)}"
+                range_max = str(self.screen_length_range_max) if self.depth_range_max != 801 else "10000"
+                msg += f" ScreenLenRange {str(self.screen_length_range_min)} {range_max}"
 
         msg += " ENDofMSG\n"
         return msg
