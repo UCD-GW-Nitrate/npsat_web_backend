@@ -323,6 +323,8 @@ def enable_scenario_dev_data():
                     crop_code_field = models.Scenario.SWAT_CROP
             elif category == "Flow Scenario":
                 scenario_type = models.Scenario.TYPE_FLOW
+            elif category == "Well Type Scenario":
+                scenario_type = models.Scenario.TYPE_WELLTYPE
             else:
                 scenario_type = models.Scenario.TYPE_UNSAT
             models.Scenario.objects.create(

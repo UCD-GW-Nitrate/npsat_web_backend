@@ -170,6 +170,7 @@ class RunResultSerializer(serializers.ModelSerializer):
     unsat_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
     load_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
     flow_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
+    welltype_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
     results = NestedResultPercentileSerializer(many=True, read_only=True)
 
     class Meta:
@@ -216,6 +217,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         unsat_scenario = validated_data.pop("unsat_scenario")
         load_scenario = validated_data.pop("load_scenario")
         flow_scenario = validated_data.pop("flow_scenario")
+        welltype_scenario = validated_data.pop("welltype_scenario")
 
         # check if there is a BAU created by service bot
         service_bot = User.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
@@ -223,6 +225,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         BAU_condition &= Q(unsat_scenario__id=unsat_scenario["id"])
         BAU_condition &= Q(flow_scenario__id=flow_scenario["id"])
         BAU_condition &= Q(load_scenario__id=load_scenario["id"])
+        BAU_condition &= Q(welltype_scenario__id=welltype_scenario["id"])
         BAU_condition &= Q(is_base=True)
         BAU_condition &= Q(public=True)
         BAU_condition &= Q(user=service_bot)
@@ -239,6 +242,7 @@ class RunResultSerializer(serializers.ModelSerializer):
                 unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
                 flow_scenario=models.Scenario.objects.get(id=flow_scenario["id"]),
                 load_scenario=models.Scenario.objects.get(id=load_scenario["id"]),
+                welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
                 is_base=True,
                 public=True,
                 sim_end_year=2500,
@@ -261,6 +265,7 @@ class RunResultSerializer(serializers.ModelSerializer):
             unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
             flow_scenario=models.Scenario.objects.get(id=flow_scenario["id"]),
             load_scenario=models.Scenario.objects.get(id=load_scenario["id"]),
+            welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
         )
         for modification in modifications_data:
             proportion = modification["proportion"]

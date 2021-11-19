@@ -145,10 +145,12 @@ class Scenario(models.Model):
     TYPE_FLOW = 1
     TYPE_UNSAT = 2
     TYPE_LOAD = 3
+    TYPE_WELLTYPE = 4
     SCENARIO_TYPE = [
         (TYPE_FLOW, "flowScen"),
         (TYPE_UNSAT, "unsatScen"),
         (TYPE_LOAD, "loadScen"),
+        (TYPE_WELLTYPE, "welltypeScen"),
     ]
 
     # macros for crop used
@@ -277,6 +279,12 @@ class ModelRun(models.Model):
         related_name="model_runs_unsat",
         limit_choices_to={"scenario_type": Scenario.TYPE_UNSAT},
     )
+    welltype_scenario = models.ForeignKey(
+        Scenario,
+        on_delete=models.DO_NOTHING,
+        related_name="model_runs_welltype",
+        limit_choices_to={"scenario_type": Scenario.TYPE_WELLTYPE},
+    )
 
     # resulting metadata from mantis
     n_wells = models.IntegerField(null=True, blank=True)
@@ -321,6 +329,7 @@ class ModelRun(models.Model):
         msg += f" flowScen {self.flow_scenario.mantis_id}"
         msg += f" loadScen {self.load_scenario.mantis_id}"
         msg += f" unsatScen {self.unsat_scenario.mantis_id}"
+        msg += f" welltypeScen {self.welltype_scenario.mantis_id}"
         msg += f" unsatWC {self.water_content}"
 
         regions = list(
