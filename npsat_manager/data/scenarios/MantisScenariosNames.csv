@@ -8,6 +8,6 @@ Unsaturated Scenario,C2VSIM_SPRING_2000,Average Vadose Zone Thickness,Based on 2
 Unsaturated Scenario,C2VSIM_SPRING_2015,Drought/Large Vadose Zone Thickness,Based on 2015 spring data from the C2Vsim fine grid model,,gwt.ucdavis.edu
 Flow Scenario,C2VsimRun01Ref6,C2Vsim,Simulation based on C2Vsim average flow conditions. Each basin has been averaged on a different period,,gwt.ucdavis.edu
 Flow Scenario,CVHMRun01,CVHM,Simulation based on CVHM average flow conditions. Each basin has been averaged on a different period,,gwt.ucdavis.edu
-Well Type Scenario,,Public Supply Wells and Irrigation Wells,,,
-Well Type Scenario,,Domestic Wells,,,
-Well Type Scenario,,Virtual Shallow Monitoring Well Network Grid,,,
+Well Type Scenario,VI,Public Supply Wells and Irrigation Wells,Public Supply Wells and Irrigation Wells,,
+Well Type Scenario,VD,Domestic Wells,Domestic Wells,,
+Well Type Scenario,VM,Virtual Shallow Monitoring Well Network Grid,Virtual Shallow Monitoring Well Network Grid,,

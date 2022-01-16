@@ -51,8 +51,11 @@ INSTALLED_APPS = [
     #'drf_yasg',  # django rest framework schema generator
 ]
 
+#set settings.ALLOWED_HOSTS if DEBUG is False --Michael
 if DEBUG:
     INSTALLED_APPS += ("corsheaders",)
+else:
+    ALLOWED_HOSTS = ['*']
 
 CORS_ORIGIN_ALLOW_ALL = DEBUG
 CORS_ORIGIN_WHITELIST = (

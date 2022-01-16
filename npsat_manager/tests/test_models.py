@@ -178,6 +178,11 @@ class ModelRunTestCase(TestCase):
                 mantis_id="test_scen_flow",
                 scenario_type=models.Scenario.TYPE_FLOW,
             ).save()
+            # models.Scenario.objects.create(
+            #     name="test_scen_welltype",
+            #     mantis_id="test_scen_welltype",
+            #     scenario_type=models.Scenario.TYPE_WELLTYPE,
+            # ).save()
             # crops
             models.Crop.objects.create(
                 name="grape", crop_type=models.Crop.SWAT_CROP, swat_code=5
@@ -206,6 +211,9 @@ class ModelRunTestCase(TestCase):
                 unsat_scenario=models.Scenario.objects.get(
                     scenario_type=models.Scenario.TYPE_UNSAT
                 ),
+                # welltype_scenario=models.Scenario.objects.get(
+                #     scenario_type=models.Scenario.TYPE_WELLTYPE
+                # ),
             ).save()
 
     def test_ModelRun_create(self):
@@ -222,6 +230,9 @@ class ModelRunTestCase(TestCase):
             unsat_scenario=models.Scenario.objects.get(
                 scenario_type=models.Scenario.TYPE_UNSAT
             ),
+            # welltype_scenario=models.Scenario.objects.get(
+            #     scenario_type=models.Scenario.TYPE_WELLTYPE
+            # ),
             depth_range_max=350.22,
             depth_range_min=20.11,
             screen_length_range_max=100.00,
@@ -294,6 +305,9 @@ class ModelRunTestCase(TestCase):
                     unsat_scenario=models.Scenario.objects.get(
                         scenario_type=models.Scenario.TYPE_UNSAT
                     ),
+                    # welltype_scenario=models.Scenario.objects.get(
+                    #     scenario_type=models.Scenario.TYPE_WELLTYPE
+                    # ),
                 )
                 model_to_be_deleted.regions.add(
                     models.Region.objects.get(name="Sac Basin")

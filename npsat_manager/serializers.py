@@ -198,6 +198,7 @@ class RunResultSerializer(serializers.ModelSerializer):
             "load_scenario",
             "flow_scenario",
             "unsat_scenario",
+            "welltype_scenario",
             "applied_simulation_filter",
             "depth_range_min",
             "depth_range_max",

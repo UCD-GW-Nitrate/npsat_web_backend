@@ -330,6 +330,7 @@ def load_default_model_runs():
         flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
         load_scenario=models.Scenario.objects.get(mantis_id="GNLM"),
         unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
+        #welltype_scenario=models.Scenario.objects.get(mantis_id="VI"),
         is_base=True,
         status=models.ModelRun.COMPLETED,
     )
@@ -342,6 +343,7 @@ def load_default_model_runs():
         flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
         load_scenario=models.Scenario.objects.get(mantis_id="SWAT1"),
         unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
+        #welltype_scenario=models.Scenario.objects.get(mantis_id="VI"),
         is_base=True,
     )
 
@@ -354,6 +356,7 @@ def load_default_model_runs():
         flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
         load_scenario=models.Scenario.objects.get(mantis_id="SWAT1"),
         unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
+        #welltype_scenario=models.Scenario.objects.get(mantis_id="VI"),
         is_base=False,
         public=False,
     )
@@ -366,6 +369,7 @@ def load_default_model_runs():
         flow_scenario=models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6"),
         load_scenario=models.Scenario.objects.get(mantis_id="SWAT1"),
         unsat_scenario=models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2015"),
+        #welltype_scenario=models.Scenario.objects.get(mantis_id="VI"),
         is_base=False,
         public=True,
     )

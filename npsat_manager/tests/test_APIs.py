@@ -8,7 +8,7 @@ Note:
 
 from django.test import TestCase
 from rest_framework.test import APIClient
-from npsat_manager import models
+from npsat_manager import mantis, models
 from npsat_manager.tests import utils
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
@@ -317,6 +317,7 @@ class APITestCase(TestCase):
         flow_scen = models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6")
         unsat_scen = models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2000")
         load_scen = models.Scenario.objects.get(mantis_id="GNLM")
+       # welltype_scen = models.Scenario.objects.get(mantis_id="VI")###needs to be replaced
         # test with non login user
         client_no_login = APIClient()
 
@@ -330,6 +331,7 @@ class APITestCase(TestCase):
             "unsat_scenario": {"id": unsat_scen.id},
             "flow_scenario": {"id": flow_scen.id},
             "load_scenario": {"id": load_scen.id},
+            #"welltype_scenario": {"id": welltype_scen.id},
             "depth_range_max": 100.2,
             "depth_range_min": 89.98
         }

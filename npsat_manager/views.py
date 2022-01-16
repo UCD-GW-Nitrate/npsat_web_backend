@@ -297,6 +297,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 flow_scenario=instance.flow_scenario,
                 unsat_scenario=instance.unsat_scenario,
                 load_scenario=instance.load_scenario,
+                welltype_scenario=instance.welltype_scenario,
                 is_base=True,
                 public=True,
                 user=User.objects.get(username=local_settings.ADMIN_BOT_USERNAME),
@@ -362,6 +363,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 Q(flow_scenario__in=scenarios_list)
                 | Q(unsat_scenario__in=scenarios_list)
                 | Q(load_scenario__in=scenarios_list)
+                | Q(welltype_scenario__in=scenarios_list)
             )
 
         if sorter:
