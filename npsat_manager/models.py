@@ -150,7 +150,7 @@ class Scenario(models.Model):
         (TYPE_FLOW, "flowScen"),
         (TYPE_UNSAT, "unsatScen"),
         (TYPE_LOAD, "loadScen"),
-        (TYPE_WELLTYPE, "welltypeScen"),
+        (TYPE_WELLTYPE, "wellType"),
     ]
 
     # macros for crop used
@@ -329,7 +329,7 @@ class ModelRun(models.Model):
         msg += f" flowScen {self.flow_scenario.mantis_id}"
         msg += f" loadScen {self.load_scenario.mantis_id}"
         msg += f" unsatScen {self.unsat_scenario.mantis_id}"
-        msg += f" welltypeScen {self.welltype_scenario.mantis_id}"
+        msg += f" wellType {self.welltype_scenario.mantis_id}"
         msg += f" unsatWC {self.water_content}"
 
         regions = list(
