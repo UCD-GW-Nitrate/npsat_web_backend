@@ -6,7 +6,7 @@ Load Scenario,SWAT3,High Irrigation,,,
 Load Scenario,SWAT4,High Irrigation and High Fertilization,,,
 Unsaturated Scenario,C2VSIM_SPRING_2000,Average Vadose Zone Thickness,Based on 2000 spring data from the C2Vsim fine grid model ,,gwt.ucdavis.edu
 Unsaturated Scenario,C2VSIM_SPRING_2015,Drought/Large Vadose Zone Thickness,Based on 2015 spring data from the C2Vsim fine grid model,,gwt.ucdavis.edu
-Flow Scenario,C2VsimRun01Ref6,C2Vsim,Simulation based on C2Vsim average flow conditions. Each basin has been averaged on a different period,,gwt.ucdavis.edu
+Flow Scenario,C2VSIM_II_01,C2Vsim,Simulation based on C2Vsim average flow conditions. Each basin has been averaged on a different period,,gwt.ucdavis.edu
 Flow Scenario,CVHMRun01,CVHM,Simulation based on CVHM average flow conditions. Each basin has been averaged on a different period,,gwt.ucdavis.edu
 Well Type Scenario,VI,Public Supply Wells and Irrigation Wells,Public Supply Wells and Irrigation Wells,,
 Well Type Scenario,VD,Domestic Wells,Domestic Wells,,
