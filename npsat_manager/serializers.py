@@ -237,7 +237,8 @@ class RunResultSerializer(serializers.ModelSerializer):
         if BAU_instances.count() == 0:
             # create BAU
             BAU_model = models.ModelRun.objects.create(
-                user=service_bot,
+                #user=service_bot,
+                user=user,
                 name="BAU model",  # TODO: generate a better name
                 description="This an automatically generated BAU model. Check model detail page for more information",
                 unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
