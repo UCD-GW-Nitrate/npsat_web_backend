@@ -220,6 +220,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         flow_scenario = validated_data.pop("flow_scenario")
         welltype_scenario = validated_data.pop("welltype_scenario")
         water_content = validated_data["water_content"]
+        sim_end_year = validated_data["sim_end_year"]
 
         # check if there is a BAU created by service bot
         service_bot = User.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
@@ -248,7 +249,7 @@ class RunResultSerializer(serializers.ModelSerializer):
                 welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
                 is_base=True,
                 public=True,
-                sim_end_year=2500,
+                sim_end_year=sim_end_year,
                 reduction_start_year=2020,
                 reduction_end_year=2020,
                 status=models.ModelRun.READY,
