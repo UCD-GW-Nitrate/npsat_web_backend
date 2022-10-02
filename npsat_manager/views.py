@@ -293,6 +293,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         include_base = self.request.query_params.get("includeBase", False)
         base_model = None
         if include_base and not instance.is_base:
+            context=self.get_serializer_context()
             base_model = models.ModelRun.objects.filter(
                 flow_scenario=instance.flow_scenario,
                 unsat_scenario=instance.unsat_scenario,
@@ -300,7 +301,8 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 welltype_scenario=instance.welltype_scenario,
                 is_base=True,
                 public=True,
-                user=User.objects.get(username=local_settings.ADMIN_BOT_USERNAME),
+                #user=User.objects.get(username=local_settings.ADMIN_BOT_USERNAME),
+                user=context["user"],# allow current user to compare and delete BAU created by himself
             )
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)

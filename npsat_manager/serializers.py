@@ -222,7 +222,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         water_content = validated_data["water_content"]
         sim_end_year = validated_data["sim_end_year"]
 
-        # check if there is a BAU created by service bot
+        # check if there is a BAU created by CURRENT USER
         service_bot = User.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
         BAU_condition = Q()
         BAU_condition &= Q(unsat_scenario__id=unsat_scenario["id"])
@@ -231,7 +231,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         BAU_condition &= Q(welltype_scenario__id=welltype_scenario["id"])
         BAU_condition &= Q(is_base=True)
         BAU_condition &= Q(public=True)
-        BAU_condition &= Q(user=service_bot)
+        BAU_condition &= Q(user=user)
         BAU_instances = models.ModelRun.objects.filter(BAU_condition)
         for region in regions_data:
             BAU_instances = BAU_instances.filter(regions__id=region["id"])
@@ -239,8 +239,8 @@ class RunResultSerializer(serializers.ModelSerializer):
         if BAU_instances.count() == 0:
             # create BAU
             BAU_model = models.ModelRun.objects.create(
-                user=service_bot,
-                #user=user,
+                #user=service_bot,
+                user=user, #Generate BAU model by current user
                 name="BAU model",  # TODO: generate a better name
                 description="This an automatically generated BAU model. Check model detail page for more information",
                 unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
