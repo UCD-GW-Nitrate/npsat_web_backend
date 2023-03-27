@@ -303,6 +303,12 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 public=True,
                 #user=User.objects.get(username=local_settings.ADMIN_BOT_USERNAME),
                 user=context["user"],# allow current user to compare and delete BAU created by himself
+                water_content=instance.water_content,
+                depth_range_min=instance.depth_range_min,
+                depth_range_max=instance.depth_range_max,
+                screen_length_range_min=instance.screen_length_range_min,
+                screen_length_range_max=instance.screen_length_range_max,
+                sim_end_year=instance.sim_end_year,
             )
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)
