@@ -222,10 +222,11 @@ class RunResultSerializer(serializers.ModelSerializer):
         water_content = validated_data["water_content"]
         sim_end_year = validated_data["sim_end_year"]
         applied_simulation_filter = validated_data["applied_simulation_filter"]
-        depth_range_min = validated_data["depth_range_min"]
-        depth_range_max = validated_data["depth_range_max"]
-        screen_length_range_min = validated_data["screen_length_range_min"]
-        screen_length_range_max = validated_data["screen_length_range_max"]
+        if (applied_simulation_filter):
+            depth_range_min = validated_data["depth_range_min"]
+            depth_range_max = validated_data["depth_range_max"]
+            screen_length_range_min = validated_data["screen_length_range_min"]
+            screen_length_range_max = validated_data["screen_length_range_max"]
 
 
         # check if there is a BAU created by CURRENT USER
@@ -240,10 +241,11 @@ class RunResultSerializer(serializers.ModelSerializer):
         BAU_condition &= Q(user=user)
         BAU_condition &= Q(water_content=water_content)
         BAU_condition &= Q(applied_simulation_filter=applied_simulation_filter)
-        BAU_condition &= Q(depth_range_min=depth_range_min)
-        BAU_condition &= Q(depth_range_max=depth_range_max)
-        BAU_condition &= Q(screen_length_range_min=screen_length_range_min)
-        BAU_condition &= Q(screen_length_range_max=screen_length_range_max)
+        if (applied_simulation_filter):
+            BAU_condition &= Q(depth_range_min=depth_range_min)
+            BAU_condition &= Q(depth_range_max=depth_range_max)
+            BAU_condition &= Q(screen_length_range_min=screen_length_range_min)
+            BAU_condition &= Q(screen_length_range_max=screen_length_range_max)
         BAU_condition &= Q(sim_end_year=sim_end_year)
         BAU_instances = models.ModelRun.objects.filter(BAU_condition)
         for region in regions_data:
@@ -251,29 +253,48 @@ class RunResultSerializer(serializers.ModelSerializer):
 
         if BAU_instances.count() == 0:
             # create BAU
-            BAU_model = models.ModelRun.objects.create(
-                #user=service_bot,
-                user=user, #Generate BAU model by current user
-                name="BAU model",  # TODO: generate a better name
-                description="This an automatically generated BAU model. Check model detail page for more information",
-                unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
-                flow_scenario=models.Scenario.objects.get(id=flow_scenario["id"]),
-                load_scenario=models.Scenario.objects.get(id=load_scenario["id"]),
-                welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
-                is_base=True,
-                public=True,
-                sim_end_year=sim_end_year,
-                reduction_start_year=2020,
-                reduction_end_year=2020,
-                status=models.ModelRun.READY,
-                water_content=water_content,
-                applied_simulation_filter=applied_simulation_filter,
-                depth_range_min=depth_range_min,
-                depth_range_max=depth_range_max,
-                screen_length_range_min=screen_length_range_min,
-                screen_length_range_max=screen_length_range_max,
-
-            )
+            if (applied_simulation_filter):
+                BAU_model = models.ModelRun.objects.create(
+                    #user=service_bot,
+                    user=user, #Generate BAU model by current user
+                    name="BAU model",  # TODO: generate a better name
+                    description="This an automatically generated BAU model. Check model detail page for more information",
+                    unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
+                    flow_scenario=models.Scenario.objects.get(id=flow_scenario["id"]),
+                    load_scenario=models.Scenario.objects.get(id=load_scenario["id"]),
+                    welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
+                    is_base=True,
+                    public=True,
+                    sim_end_year=sim_end_year,
+                    reduction_start_year=2020,
+                    reduction_end_year=2020,
+                    status=models.ModelRun.READY,
+                    water_content=water_content,
+                    applied_simulation_filter=applied_simulation_filter,
+                    depth_range_min=depth_range_min,
+                    depth_range_max=depth_range_max,
+                    screen_length_range_min=screen_length_range_min,
+                    screen_length_range_max=screen_length_range_max,
+                )
+            else:
+                BAU_model = models.ModelRun.objects.create(
+                    #user=service_bot,
+                    user=user, #Generate BAU model by current user
+                    name="BAU model",  # TODO: generate a better name
+                    description="This an automatically generated BAU model. Check model detail page for more information",
+                    unsat_scenario=models.Scenario.objects.get(id=unsat_scenario["id"]),
+                    flow_scenario=models.Scenario.objects.get(id=flow_scenario["id"]),
+                    load_scenario=models.Scenario.objects.get(id=load_scenario["id"]),
+                    welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
+                    is_base=True,
+                    public=True,
+                    sim_end_year=sim_end_year,
+                    reduction_start_year=2020,
+                    reduction_end_year=2020,
+                    status=models.ModelRun.READY,
+                    water_content=water_content,
+                    applied_simulation_filter=applied_simulation_filter,
+                )
             for region in regions_data:
                 BAU_model.regions.add(models.Region.objects.get(id=region["id"]))
             models.Modification.objects.create(
