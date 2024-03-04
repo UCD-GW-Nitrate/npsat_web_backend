@@ -14,8 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from django.conf.urls import url, include
+from django.urls import path, include, re_path
 
 from rest_framework import routers
 from npsat_manager import views
@@ -52,15 +51,15 @@ router.register(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    url(r"^api/", include(router.urls)),
-    url(
+    re_path(r"^api/", include(router.urls)),
+    re_path(
         r"^api-token-auth/", views.CustomAuthToken.as_view()
     ),  # POST a username and password here, get a token back
-    url(r"^api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+    re_path(r"^api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     # dashboard feed
-    url(r"^api/feed/", views.FeedOnDashboard.as_view()),
+    re_path(r"^api/feed/", views.FeedOnDashboard.as_view()),
     # model status
-    url(r"^api/model_run__status/", views.GetModelStatus.as_view()),
+    re_path(r"^api/model_run__status/", views.GetModelStatus.as_view()),
     # DRF docs from drf-yasg
     # url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     # url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

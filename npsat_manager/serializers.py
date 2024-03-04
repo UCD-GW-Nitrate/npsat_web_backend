@@ -222,10 +222,10 @@ class RunResultSerializer(serializers.ModelSerializer):
         water_content = validated_data["water_content"]
         sim_end_year = validated_data["sim_end_year"]
         applied_simulation_filter = validated_data["applied_simulation_filter"]
-        depth_range_min = validated_data["depth_range_min"]
-        depth_range_max = validated_data["depth_range_max"]
-        screen_length_range_min = validated_data["screen_length_range_min"]
-        screen_length_range_max = validated_data["screen_length_range_max"]
+        depth_range_min = validated_data.get("depth_range_min", None)
+        depth_range_max = validated_data.get("depth_range_max", None)
+        screen_length_range_min = validated_data.get("screen_length_range_min", None)
+        screen_length_range_max = validated_data.get("screen_length_range_max", None)
 
 
         # check if there is a BAU created by CURRENT USER

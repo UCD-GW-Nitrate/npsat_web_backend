@@ -11,6 +11,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 
+import logging
+
 from npsat_manager import serializers
 from npsat_manager import models
 from npsat_backend import local_settings
@@ -22,6 +24,7 @@ from django.http import HttpResponse
 from django.db.models import Q
 from django.contrib.auth.models import User
 
+log = logging.getLogger("npsat.manager")
 
 class CustomAuthToken(ObtainAuthToken):
     """
@@ -292,6 +295,8 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         # whether the client sends note that include base model
         include_base = self.request.query_params.get("includeBase", False)
         base_model = None
+        log.info("includes base2")
+        log.info(include_base and not instance.is_base)
         if include_base and not instance.is_base:
             context=self.get_serializer_context()
             base_model = models.ModelRun.objects.filter(
@@ -310,14 +315,23 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 screen_length_range_max=instance.screen_length_range_max,
                 sim_end_year=instance.sim_end_year,
             )
+            log.info("first filter2")
+            if len(base_model) != 0:
+                log.info(base_model[0])
+
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)
+
+            log.info("second filter2")
+            if len(base_model) != 0:
+                log.info(base_model)
+
             if len(base_model) != 0:
                 base_model = base_model[0]
         if base_model:
             serializer = self.get_serializer([instance, base_model], many=True)
         else:
-            serializer = self.get_serializer(instance)
+            serializer = self.get_serializer([instance, instance], many=True)
         return Response(serializer.data)
 
     def get_queryset(self):
