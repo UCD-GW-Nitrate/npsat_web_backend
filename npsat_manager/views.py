@@ -250,6 +250,16 @@ class RegionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(region_type=region_type)
         return queryset
 
+    def list(self, response):
+        regionIds = self.request.query_params.getlist("regionIds", [])
+        serializer = None
+        if len(regionIds) > 0:
+            query_set = models.Region.objects.filter(id__in=regionIds)
+            serializer = self.get_serializer(query_set, many=True)
+        else:
+            serializer = self.get_serializer(models.Region.objects.all(), many=True)
+        return Response(serializer.data)
+
 
 class ModelRunViewSet(viewsets.ModelViewSet):
     """
@@ -330,12 +340,9 @@ class ModelRunViewSet(viewsets.ModelViewSet):
     
     def list(self, response):
         modelIds = self.request.query_params.getlist("modelIds", [])
-        log.info("model ids:")
-        log.info(modelIds)
         serializer = None
         if len(modelIds) > 0:
             query_set = models.ModelRun.objects.filter(id__in=modelIds)
-            log.info(len(query_set))
             serializer = self.get_serializer(query_set, many=True)
         else:
             serializer = self.get_serializer(models.ModelRun.objects.all(), many=True)
@@ -446,3 +453,14 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             | Q(model__public=True)
             | Q(model__is_base=True)
         ).order_by("-id")
+    
+    def list(self, response):
+        percentileIds = self.request.query_params.getlist("percentileIds", [])
+        serializer = None
+        if len(percentileIds) > 0:
+            query_set = models.ResultPercentile.objects.filter(id__in=percentileIds)
+            serializer = self.get_serializer(query_set, many=True)
+        else:
+            serializer = self.get_serializer(models.ResultPercentile.objects.all(), many=True)
+        return Response(serializer.data)
+
