@@ -10,6 +10,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import APIException
 
 import logging
 
@@ -295,8 +296,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         # whether the client sends note that include base model
         include_base = self.request.query_params.get("includeBase", False)
         base_model = None
-        log.info("includes base2")
-        log.info(include_base and not instance.is_base)
+
         if include_base and not instance.is_base:
             context=self.get_serializer_context()
             base_model = models.ModelRun.objects.filter(
@@ -315,24 +315,32 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 screen_length_range_max=instance.screen_length_range_max,
                 sim_end_year=instance.sim_end_year,
             )
-            log.info("first filter2")
-            if len(base_model) != 0:
-                log.info(base_model[0])
-
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)
 
-            log.info("second filter2")
-            if len(base_model) != 0:
-                log.info(base_model)
-
             if len(base_model) != 0:
                 base_model = base_model[0]
-        if base_model:
+        if base_model and include_base:
             serializer = self.get_serializer([instance, base_model], many=True)
+        elif not base_model and include_base:
+            raise APIException("Base model is not found!")
         else:
-            serializer = self.get_serializer([instance, instance], many=True)
+            serializer = self.get_serializer(instance, many=True)
         return Response(serializer.data)
+    
+    def list(self, response):
+        modelIds = self.request.query_params.getlist("modelIds", [])
+        log.info("model ids:")
+        log.info(modelIds)
+        serializer = None
+        if len(modelIds) > 0:
+            query_set = models.ModelRun.objects.filter(id__in=modelIds)
+            log.info(len(query_set))
+            serializer = self.get_serializer(query_set, many=True)
+        else:
+            serializer = self.get_serializer(models.ModelRun.objects.all(), many=True)
+        return Response(serializer.data)
+
 
     def get_queryset(self):
         # tags
