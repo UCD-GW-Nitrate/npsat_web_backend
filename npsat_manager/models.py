@@ -498,7 +498,7 @@ class MantisServer(models.Model):
         s.connect((self.host, self.port))
         # mantis_reader, mantis_writer = asyncio.open_connection(server.host, server.port)
         # log.debug("Connected successfully")
-        command_string = model_run.input_message
+        command_string = "modelArea CentralValley " + model_run.input_message
         log.info("Command String is: {}".format(command_string))
         s.send(command_string.encode("utf-8"))
         # s.flush()
