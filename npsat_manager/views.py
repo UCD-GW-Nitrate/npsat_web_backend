@@ -90,11 +90,13 @@ class FeedOnDashboard(APIView):
         completed_models = models.ModelRun.objects.filter(
             user=self.request.user,
             status=models.ModelRun.COMPLETED,
+            is_base=False,
         ).order_by("-date_completed")
         recent_published_models = (
             models.ModelRun.objects.exclude(user=self.request.user)
             .filter(public=True)
-            .order_by("-date_completed")[:10]
+            .filter(is_base=False)
+            .order_by("-date_completed")
         )
         total_created_number = models.ModelRun.objects.filter(
             user=self.request.user
@@ -116,7 +118,7 @@ class FeedOnDashboard(APIView):
         return Response(
             {
                 "recent_completed_models": serializers.RunResultSerializer(
-                    completed_models[:10], many=True
+                    completed_models, many=True
                 ).data,
                 "recent_published_models": serializers.RunResultSerializer(
                     recent_published_models, many=True
@@ -246,18 +248,25 @@ class RegionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = models.Region.objects.filter(active_in_mantis=True).order_by("name")
         region_type = self.request.query_params.get("region_type", False)
+
         if region_type:
             queryset = queryset.filter(region_type=region_type)
         return queryset
 
     def list(self, response):
+        queryset = models.Region.objects.filter(active_in_mantis=True).order_by("name")
+        region_type = self.request.query_params.get("region_type", False)
+
+        if region_type:
+            queryset = queryset.filter(region_type=region_type)
+
         regionIds = self.request.query_params.getlist("regionIds", [])
         serializer = None
         if len(regionIds) > 0:
-            query_set = models.Region.objects.filter(id__in=regionIds)
-            serializer = self.get_serializer(query_set, many=True)
+            res = queryset.filter(id__in=regionIds)
+            serializer = self.get_serializer(res, many=True)
         else:
-            serializer = self.get_serializer(models.Region.objects.all(), many=True)
+            serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 
@@ -294,6 +303,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         return context
 
     def retrieve(self, request, *args, **kwargs):
+        print("getting base and model")
         serializer = None
         instance = self.get_object()
         # check if user have permission reading this model
@@ -306,6 +316,9 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         # whether the client sends note that include base model
         include_base = self.request.query_params.get("includeBase", False)
         base_model = None
+
+        print(include_base)
+        print(instance.is_base)
 
         if include_base and not instance.is_base:
             context=self.get_serializer_context()
@@ -325,11 +338,22 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 screen_length_range_max=instance.screen_length_range_max,
                 sim_end_year=instance.sim_end_year,
             )
+
+            print("base model")
+            print(base_model)
+
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)
 
+            print("base model2")
+            print(base_model)
+
             if len(base_model) != 0:
                 base_model = base_model[0]
+
+            print("base model3")
+            print(base_model)
+
         if base_model and include_base:
             serializer = self.get_serializer([instance, base_model], many=True)
         elif not base_model and include_base:
