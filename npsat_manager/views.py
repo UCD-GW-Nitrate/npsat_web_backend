@@ -24,8 +24,12 @@ from npsat_manager.support import (
 from django.http import HttpResponse
 from django.db.models import Q
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 log = logging.getLogger("npsat.manager")
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = serializers.MyTokenObtainPairSerializer
 
 class CustomAuthToken(ObtainAuthToken):
     """
@@ -359,7 +363,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         elif not base_model and include_base:
             raise APIException("Base model is not found!")
         else:
-            serializer = self.get_serializer(instance, many=True)
+            serializer = self.get_serializer(instance)
         return Response(serializer.data)
     
     def list(self, response):

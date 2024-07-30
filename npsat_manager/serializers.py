@@ -6,7 +6,15 @@ from npsat_manager import models
 from npsat_backend import local_settings
 from django.db.models import Q
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['username'] = user.username
+
+        return token
 
 class CropSerializer(serializers.ModelSerializer):
     class Meta:

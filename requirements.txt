@@ -5,3 +5,4 @@ django-cors-headers
 six
 waitress
 psycopg2
+djangorestframework-simplejwt
