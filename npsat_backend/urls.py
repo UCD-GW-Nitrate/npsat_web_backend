@@ -22,10 +22,6 @@ from npsat_manager import views
 from rest_framework import permissions
 from rest_framework.schemas import get_schema_view as drf_get_schema_view
 
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
-
 # from drf_yasg.views import get_schema_view
 # from drf_yasg import openapi
 
@@ -55,8 +51,6 @@ router.register(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('api/token/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     re_path(r"^api/", include(router.urls)),
     re_path(
         r"^api-token-auth/", views.CustomAuthToken.as_view()
