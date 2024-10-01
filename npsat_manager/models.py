@@ -245,6 +245,7 @@ class ModelRun(models.Model):
     reduction_start_year = models.IntegerField(default=2020, blank=True)
     reduction_end_year = models.IntegerField(default=2025, blank=True)
     water_content = models.DecimalField(max_digits=5, decimal_places=4, default=0)
+    porosity = models.DecimalField(max_digits=5, decimal_places=4, default=0)
 
     # methods to narrow the simulation ranges
     applied_simulation_filter = models.BooleanField(null=False, default=False, blank=False)
@@ -331,6 +332,7 @@ class ModelRun(models.Model):
         msg += f" unsatScen {self.unsat_scenario.mantis_id}"
         msg += f" wellType {self.welltype_scenario.mantis_id}"
         msg += f" unsatWC {self.water_content}"
+        msg += f" porosity {self.porosity}"
 
         regions = list(
             self.regions.all()
@@ -561,6 +563,9 @@ def process_results(results, model_run):
         3:-1
     ]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
     # we need to have a number of results divisible by the number of wells and the number of years, so do some checks
+    log.info(len(results_values))
+    log.info(n_years)
+    log.info(model_run.n_wells)
     if (
         len(results_values) % n_years != 0
         or (len(results_values) / model_run.n_wells) != n_years
@@ -575,7 +580,7 @@ def process_results(results, model_run):
     # OK, now we should be safe to proceed
     # we're going to make a 2 dimensional numpy array where every row is a well and every column is a year
     # start by making it a numpy array and convert to float by default
-    results_array = numpy.array(results_values, dtype=numpy.float)
+    results_array = numpy.array(results_values, dtype=float)
     results_2d = results_array.reshape(model_run.n_wells, n_years)
     # get the percentiles - when a percentile would be between 2 values, get the nearest actual value in the dataset
     # instead of interpolating between them, mostly because numpy throws errors when we try that.

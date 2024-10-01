@@ -151,6 +151,7 @@ class CompletedRunResultWithValuesSerializer(serializers.ModelSerializer):
             "status_message",
             "sim_end_year",
             "water_content",
+            "porosity",
             "reduction_start_year",
             "reduction_end_year",
             "results",
@@ -189,6 +190,7 @@ class RunResultSerializer(serializers.ModelSerializer):
             "status_message",
             "sim_end_year",
             "water_content",
+            "porosity",
             "reduction_start_year",
             "reduction_end_year",
             "is_base",
@@ -220,6 +222,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         flow_scenario = validated_data.pop("flow_scenario")
         welltype_scenario = validated_data.pop("welltype_scenario")
         water_content = validated_data["water_content"]
+        porosity = validated_data["porosity"]
         sim_end_year = validated_data["sim_end_year"]
         applied_simulation_filter = validated_data["applied_simulation_filter"]
         depth_range_min = validated_data.get("depth_range_min", None)
@@ -239,6 +242,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         BAU_condition &= Q(public=True)
         BAU_condition &= Q(user=user)
         BAU_condition &= Q(water_content=water_content)
+        BAU_condition &= Q(porosity=porosity)
         BAU_condition &= Q(applied_simulation_filter=applied_simulation_filter)
         if (applied_simulation_filter):
             BAU_condition &= Q(depth_range_min=depth_range_min)
@@ -269,6 +273,7 @@ class RunResultSerializer(serializers.ModelSerializer):
                     reduction_end_year=2020,
                     status=models.ModelRun.READY,
                     water_content=water_content,
+                    porosity=porosity,
                     applied_simulation_filter=applied_simulation_filter,
                     depth_range_min=depth_range_min,
                     depth_range_max=depth_range_max,
@@ -292,6 +297,7 @@ class RunResultSerializer(serializers.ModelSerializer):
                     reduction_end_year=2020,
                     status=models.ModelRun.READY,
                     water_content=water_content,
+                    porosity=porosity,
                     applied_simulation_filter=applied_simulation_filter,
                 )
             for region in regions_data:

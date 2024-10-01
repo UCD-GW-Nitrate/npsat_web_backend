@@ -332,6 +332,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 #user=User.objects.get(username=local_settings.ADMIN_BOT_USERNAME),
                 user=context["user"],# allow current user to compare and delete BAU created by himself
                 water_content=instance.water_content,
+                porosity=instance.porosity,
                 depth_range_min=instance.depth_range_min,
                 depth_range_max=instance.depth_range_max,
                 screen_length_range_min=instance.screen_length_range_min,
