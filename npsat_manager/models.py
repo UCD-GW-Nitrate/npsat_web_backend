@@ -332,7 +332,7 @@ class ModelRun(models.Model):
         msg += f" unsatScen {self.unsat_scenario.mantis_id}"
         msg += f" wellType {self.welltype_scenario.mantis_id}"
         msg += f" unsatWC {self.water_content}"
-        msg += f" porosity {self.porosity}"
+        msg += f" por {self.porosity}"
 
         regions = list(
             self.regions.all()
