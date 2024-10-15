@@ -17,7 +17,7 @@ class CropSerializer(serializers.ModelSerializer):
 class NestedCropSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Crop
-        fields = ("id", "name", "caml_code")
+        fields = ("id", "name", "caml_code", "crop_type", "swat_code")
         extra_kwargs = {
             "id": {
                 "read_only": False,
