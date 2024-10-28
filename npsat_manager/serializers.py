@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['email', 'password', 'username']
-        extra_kwargs = {'password': {'write_only': True, 'min_length': 5}}
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         """Create and return a user with encrypted password."""
@@ -146,7 +146,7 @@ class ModificationSerializer(serializers.ModelSerializer):
         print(model_run)
         print(model_run.user_id)
 
-        if user != model_run.user:
+        if user != model_run.user_ref:
             raise PermissionDenied(
                 "You don't have permission to attach modifications to this model run"
             )

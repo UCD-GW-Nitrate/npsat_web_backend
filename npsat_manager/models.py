@@ -266,7 +266,7 @@ class ModelRun(models.Model):
         default=django.utils.timezone.now, null=True, blank=True
     )
     date_completed = models.DateTimeField(null=True, blank=True)
-    user = models.ForeignKey(
+    user_ref = models.ForeignKey(
         User, on_delete=models.DO_NOTHING, related_name="model_runs"
     )
 
