@@ -5,8 +5,8 @@ import json
 from npsat_backend import settings
 
 from npsat_manager import models
-from django.contrib.auth.models import User
 from npsat_backend import local_settings
+from npsat_manager.models import User
 
 data_folder = os.path.join(settings.BASE_DIR, "npsat_manager", "data")
 

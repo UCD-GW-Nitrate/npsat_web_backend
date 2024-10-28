@@ -9,9 +9,9 @@ Note:
 from django.test import TestCase
 from npsat_manager import models
 from django.db import transaction
-from django.contrib.auth.models import User
 from django.db import IntegrityError
 from npsat_manager.tests import utils
+from npsat_manager.models import User
 
 
 class ResourcesTestCase(TestCase):

@@ -125,6 +125,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "npsat_backend.wsgi.application"
 
+AUTH_USER_MODEL = 'npsat_manager.User'
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators

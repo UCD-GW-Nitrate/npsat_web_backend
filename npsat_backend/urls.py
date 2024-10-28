@@ -52,6 +52,8 @@ router.register(
 urlpatterns = [
     path("admin/", admin.site.urls),
     re_path(r"^api/", include(router.urls)),
+    re_path(r"^user/create/", views.CreateUserView.as_view()),
+    re_path(r"^user/me/", views.ManageUserView.as_view()),
     re_path(
         r"^api-token-auth/", views.CustomAuthToken.as_view()
     ),  # POST a username and password here, get a token back

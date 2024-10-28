@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, generics, authentication, permissions
 from rest_framework.permissions import (
     BasePermission,
     IsAuthenticated,
@@ -23,9 +23,13 @@ from npsat_manager.support import (
 
 from django.http import HttpResponse
 from django.db.models import Q
-from django.contrib.auth.models import User
 
 log = logging.getLogger("npsat.manager")
+
+class CreateUserView(generics.CreateAPIView):
+    """Create a new user in the system."""
+    permission_classes = [permissions.AllowAny]
+    serializer_class = serializers.UserSerializer
 
 class CustomAuthToken(ObtainAuthToken):
     """
@@ -34,7 +38,8 @@ class CustomAuthToken(ObtainAuthToken):
     """
 
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
+        serializer_class = serializers.AuthTokenSerializer
+        serializer = serializer_class(
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -50,6 +55,16 @@ class CustomAuthToken(ObtainAuthToken):
                 "email": user.email,
             }
         )
+    
+class ManageUserView(generics.RetrieveUpdateAPIView):
+    """Manage the authenticated user."""
+    serializer_class = serializers.UserSerializer
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Retrieve and return the authenticated user."""
+        return self.request.user
 
 
 class ReadOnly(BasePermission):

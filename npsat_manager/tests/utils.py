@@ -10,7 +10,7 @@ Note:
 """
 
 from npsat_manager import models
-from django.contrib.auth.models import User
+from npsat_manager.models import User
 from npsat_manager import load_data
 from npsat_backend import settings
 import os

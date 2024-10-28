@@ -11,8 +11,7 @@ from rest_framework.test import APIClient
 from npsat_manager import mantis, models
 from npsat_manager.tests import utils
 from rest_framework.authtoken.models import Token
-from django.contrib.auth.models import User
-
+from npsat_manager.models import User
 
 class APITestCase(TestCase):
     """
