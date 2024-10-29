@@ -323,7 +323,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         # check if user have permission reading this model
         if (
-            instance.user_ref != self.request.user
+            instance.user != self.request.user
             and not instance.public
             and not instance.is_base
         ):

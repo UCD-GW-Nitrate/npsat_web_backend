@@ -46,7 +46,7 @@ class UserManager(BaseUserManager):
         return user
     
 
-class User(AbstractBaseUser, PermissionsMixin):
+class CustomUser(AbstractBaseUser, PermissionsMixin):
     """User in the system."""
     email = models.EmailField(max_length=255, unique=True)
     username = models.CharField(max_length=255)
@@ -266,8 +266,8 @@ class ModelRun(models.Model):
         default=django.utils.timezone.now, null=True, blank=True
     )
     date_completed = models.DateTimeField(null=True, blank=True)
-    user_ref = models.ForeignKey(
-        User, on_delete=models.DO_NOTHING, related_name="model_runs"
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.DO_NOTHING, related_name="model_runs"
     )
 
     # global model parameters

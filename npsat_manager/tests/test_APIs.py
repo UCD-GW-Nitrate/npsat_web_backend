@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from npsat_manager import mantis, models
 from npsat_manager.tests import utils
 from rest_framework.authtoken.models import Token
-from npsat_manager.models import User
+from npsat_manager.models import CustomUser
 
 class APITestCase(TestCase):
     """
@@ -312,7 +312,7 @@ class APITestCase(TestCase):
         # some pre-loaded resources
         crops = models.Crop.objects.filter(active_in_mantis=True)
         regions = models.Region.objects.filter(region_type=models.Region.CVHM_FARM)
-        user1 = User.objects.get(username="test_user1")
+        user1 = CustomUser.objects.get(username="test_user1")
         flow_scen = models.Scenario.objects.get(mantis_id="C2VsimRun01Ref6")
         unsat_scen = models.Scenario.objects.get(mantis_id="C2VSIM_SPRING_2000")
         load_scen = models.Scenario.objects.get(mantis_id="GNLM")

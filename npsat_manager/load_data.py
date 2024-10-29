@@ -6,7 +6,7 @@ from npsat_backend import settings
 
 from npsat_manager import models
 from npsat_backend import local_settings
-from npsat_manager.models import User
+from npsat_manager.models import CustomUser
 
 data_folder = os.path.join(settings.BASE_DIR, "npsat_manager", "data")
 
@@ -20,7 +20,7 @@ def load_all(mantis_port_number=5941):
 
 
 def load_system_admin_bot():
-    User.objects.create(
+    CustomUser.objects.create(
         username=local_settings.ADMIN_BOT_USERNAME,
         password=local_settings.ADMIN_BOT_PASSWORD,
     )

@@ -9,6 +9,7 @@ from django.contrib.auth import (
     get_user_model,
     authenticate,
 )
+from npsat_manager.models import CustomUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -146,7 +147,7 @@ class ModificationSerializer(serializers.ModelSerializer):
         print(model_run)
         print(model_run.user_id)
 
-        if user != model_run.user_ref:
+        if user != model_run.user:
             raise PermissionDenied(
                 "You don't have permission to attach modifications to this model run"
             )
@@ -284,7 +285,7 @@ class RunResultSerializer(serializers.ModelSerializer):
 
 
         # check if there is a BAU created by CURRENT USER
-        service_bot = User.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
+        service_bot = CustomUser.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
         BAU_condition = Q()
         BAU_condition &= Q(unsat_scenario__id=unsat_scenario["id"])
         BAU_condition &= Q(flow_scenario__id=flow_scenario["id"])
