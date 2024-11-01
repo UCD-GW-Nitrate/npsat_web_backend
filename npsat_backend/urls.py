@@ -54,6 +54,8 @@ urlpatterns = [
     re_path(r"^api/", include(router.urls)),
     re_path(r"^api/user/me/", views.ManageUserView.as_view()),
     re_path(r"^api/user/verify/", views.SendVerificationEmail.as_view()),
+    re_path(r"^unauthorized-verify/", views.SendUnauthenticatedVerificationEmail.as_view()),
+    re_path(r"^verify-code/", views.VerifyCode.as_view()),
     re_path(r"^register-user/", views.CreateUserView.as_view()),
     re_path(
         r"^api-token-auth/", views.CustomAuthToken.as_view()

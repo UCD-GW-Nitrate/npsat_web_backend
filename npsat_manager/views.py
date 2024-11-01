@@ -63,6 +63,56 @@ class SendVerificationEmail(generics.UpdateAPIView):
             fail_silently=False,
         )
         return Response({"response": response})
+    
+class SendUnauthenticatedVerificationEmail(generics.UpdateAPIView):
+    """Send a verification email to the user."""
+    permission_classes = [permissions.AllowAny]
+
+    def put(self, request):
+        users = models.CustomUser.objects.filter(email=request.data["email"])
+        if (users.count() == 0):
+            raise APIException("User not found")
+        
+        user = users[0]
+        user.verification_code = str(randrange(100000, 999999))
+        user.save()
+
+        response = send_mail(
+            "Verify your NPSAT account",
+            "Your verification code is: " + user.verification_code,
+            settings.EMAIL_HOST_USER,
+            [user.email],
+            fail_silently=False,
+        )
+        return Response({"response": response})
+    
+class VerifyCode(generics.UpdateAPIView):
+    """Verify the user's code."""
+    permission_classes = [permissions.AllowAny]
+
+    def put(self, request):
+        users = models.CustomUser.objects.filter(email=request.data["email"])
+        if (users.count() == 0):
+            raise APIException("User not found")
+        
+        user = users[0]
+
+        if (user.verification_code != request.data["verification_code"]):
+            raise APIException("Invalid code")
+        
+        token, created = Token.objects.get_or_create(user=user)
+        
+        return Response(
+            {
+                "token": token.key,
+                "user_id": user.pk,
+                "username": user.username,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "is_verified": user.is_verified,
+                "email": user.email,
+            }
+        )
 
 class CustomAuthToken(ObtainAuthToken):
     """
