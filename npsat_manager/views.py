@@ -21,6 +21,10 @@ from npsat_manager.support import (
     tokens,
 )  # token code makes sure that all users have tokens - needs to be imported somewhere
 
+from django.core.mail import send_mail
+from django.conf import settings
+from random import randrange
+
 from django.http import HttpResponse
 from django.db.models import Q
 
@@ -30,6 +34,35 @@ class CreateUserView(generics.CreateAPIView):
     """Create a new user in the system."""
     permission_classes = [permissions.AllowAny]
     serializer_class = serializers.UserSerializer
+
+    def post(self, request):
+        """Create a new user."""
+        request.data["verification_code"] = str(randrange(100000, 999999))
+        send_mail(
+            "Verify your NPSAT account",
+            "Your verification code is: " + request.data["verification_code"],
+            settings.EMAIL_HOST_USER,
+            [request.data["email"]],
+            fail_silently=True,
+        )
+        return super().post(request)
+    
+class SendVerificationEmail(generics.UpdateAPIView):
+    """Send a verification email to the user."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self):
+        self.request.user.verification_code = str(randrange(100000, 999999))
+        self.request.user.save()
+
+        response = send_mail(
+            "Verify your NPSAT account",
+            "Your verification code is: " + self.request.user.verification_code,
+            settings.EMAIL_HOST_USER,
+            [self.request.user.email],
+            fail_silently=False,
+        )
+        return Response({"response": response})
 
 class CustomAuthToken(ObtainAuthToken):
     """
@@ -52,6 +85,7 @@ class CustomAuthToken(ObtainAuthToken):
                 "username": user.username,
                 "is_staff": user.is_staff,
                 "is_superuser": user.is_superuser,
+                "is_verified": user.is_verified,
                 "email": user.email,
             }
         )

@@ -17,8 +17,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ['email', 'password', 'username']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ['email', 'password', 'username', 'is_verified', 'verification_code']
+        extra_kwargs = {
+            'password': {'write_only': True}, 
+            'verification_code': {'write_only': True}, 
+            'is_verified': {'read_only': True},
+        }
 
     def create(self, validated_data):
         """Create and return a user with encrypted password."""
@@ -27,10 +31,16 @@ class UserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update and return user."""
         password = validated_data.pop('password', None)
+        verification_code = validated_data.pop('verification_code', None)
+
         user = super().update(instance, validated_data)
 
         if password:
             user.set_password(password)
+            user.save()
+
+        if verification_code and user.verification_code == verification_code:
+            user.is_verified = True
             user.save()
 
         return user

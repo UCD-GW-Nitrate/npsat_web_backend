@@ -9,6 +9,9 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 from npsat_backend.local_settings import *
+import certifi, os
+
+os.environ["SSL_CERT_FILE"] = certifi.where()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -48,7 +51,8 @@ INSTALLED_APPS = [
     "npsat_manager",
     "rest_framework",
     "rest_framework.authtoken",
-    'django_extensions',
+    "django.core.mail",
+    #'django_extensions',
     #'drf_yasg',  # django rest framework schema generator
 ]
 
