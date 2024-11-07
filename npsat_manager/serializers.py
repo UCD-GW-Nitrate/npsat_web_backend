@@ -287,7 +287,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         water_content = validated_data["water_content"]
         porosity = validated_data["porosity"]
         sim_end_year = validated_data["sim_end_year"]
-        applied_simulation_filter = validated_data["applied_simulation_filter"]
+        applied_simulation_filter = validated_data.get("applied_simulation_filter", False)
         depth_range_min = validated_data.get("depth_range_min", None)
         depth_range_max = validated_data.get("depth_range_max", None)
         unsat_range_min = validated_data.get("unsat_range_min", None)
