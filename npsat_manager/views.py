@@ -434,8 +434,8 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 porosity=instance.porosity,
                 depth_range_min=instance.depth_range_min,
                 depth_range_max=instance.depth_range_max,
-                screen_length_range_min=instance.screen_length_range_min,
-                screen_length_range_max=instance.screen_length_range_max,
+                unsat_range_min=instance.unsat_range_min,
+                unsat_range_max=instance.unsat_range_max,
                 sim_end_year=instance.sim_end_year,
             )
 

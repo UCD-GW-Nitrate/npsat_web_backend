@@ -267,8 +267,8 @@ class RunResultSerializer(serializers.ModelSerializer):
             "applied_simulation_filter",
             "depth_range_min",
             "depth_range_max",
-            "screen_length_range_min",
-            "screen_length_range_max"
+            "unsat_range_min",
+            "unsat_range_max"
         )
         depth = 0  # should mean that modifications get included in the initial request
         extra_kwargs = {"user": {"required": False}}
@@ -290,8 +290,8 @@ class RunResultSerializer(serializers.ModelSerializer):
         applied_simulation_filter = validated_data["applied_simulation_filter"]
         depth_range_min = validated_data.get("depth_range_min", None)
         depth_range_max = validated_data.get("depth_range_max", None)
-        screen_length_range_min = validated_data.get("screen_length_range_min", None)
-        screen_length_range_max = validated_data.get("screen_length_range_max", None)
+        unsat_range_min = validated_data.get("unsat_range_min", None)
+        unsat_range_max = validated_data.get("unsat_range_max", None)
 
 
         # check if there is a BAU created by CURRENT USER
@@ -310,8 +310,8 @@ class RunResultSerializer(serializers.ModelSerializer):
         if (applied_simulation_filter):
             BAU_condition &= Q(depth_range_min=depth_range_min)
             BAU_condition &= Q(depth_range_max=depth_range_max)
-            BAU_condition &= Q(screen_length_range_min=screen_length_range_min)
-            BAU_condition &= Q(screen_length_range_max=screen_length_range_max)
+            BAU_condition &= Q(unsat_range_min=unsat_range_min)
+            BAU_condition &= Q(unsat_range_max=unsat_range_max)
         BAU_condition &= Q(sim_end_year=sim_end_year)
         BAU_instances = models.ModelRun.objects.filter(BAU_condition)
         for region in regions_data:
@@ -340,8 +340,8 @@ class RunResultSerializer(serializers.ModelSerializer):
                     applied_simulation_filter=applied_simulation_filter,
                     depth_range_min=depth_range_min,
                     depth_range_max=depth_range_max,
-                    screen_length_range_min=screen_length_range_min,
-                    screen_length_range_max=screen_length_range_max,
+                    unsat_range_min=unsat_range_min,
+                    unsat_range_max=unsat_range_max,
                 )
             else:
                 BAU_model = models.ModelRun.objects.create(
