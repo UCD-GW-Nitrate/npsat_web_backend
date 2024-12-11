@@ -411,14 +411,14 @@ class RunResultSerializer(serializers.ModelSerializer):
         name = validated_data.pop('name', None)
         description = validated_data.pop('description', None)
 
-        user = super().update(instance, validated_data)
+        model_run = super().update(instance, validated_data)
 
         if name:
-            user.name = name
-            user.save()
+            model_run.name = name
+            model_run.save()
 
-        if description and user.description == description:
-            user.description = description
-            user.save()
+        if description:
+            model_run.description = description
+            model_run.save()
 
-        return user
+        return model_run
