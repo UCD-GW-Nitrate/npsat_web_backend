@@ -537,25 +537,6 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                     return results.order_by("-" + sorter_field)
 
         return results.order_by("-id")
-    
-    def update(self, request):
-        model = models.ModelRun.objects.get(id=request.data["id"])
-        if not model:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = self.serializer_class(instance=model, data=request.data, partial=True)
-
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        if request.data["name"]:
-            model.name = request.data["name"]
-        if request.data["description"]:
-            model.description = request.data["description"]
-
-        model.save()
-        return model
-
 
 class ModificationViewSet(viewsets.ReadOnlyModelViewSet):
     """
