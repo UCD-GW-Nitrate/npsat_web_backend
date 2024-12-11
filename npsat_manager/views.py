@@ -393,7 +393,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated & ModifyAccessPermission]
-    http_method_names = ["get", "post", "put", "delete", "head", "options"]
+    http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
     serializer_class = serializers.RunResultSerializer
 
     def get_serializer_context(self):
