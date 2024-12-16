@@ -120,6 +120,30 @@ class NestedRegionSerializer(
         }
 
 
+class WellSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Well
+        fields = (
+            "flow_model", 
+            "rch_type", 
+            "well_type", 
+            "eid", 
+            "x", 
+            "y", 
+            "lat", 
+            "lon", 
+            "unsat", 
+            "wt2t", 
+            "slmod", 
+            "depth",
+            "basin", 
+            "county", 
+            "b118", 
+            "tship", 
+            "subreg",
+        )
+
+
 class ScenarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Scenario

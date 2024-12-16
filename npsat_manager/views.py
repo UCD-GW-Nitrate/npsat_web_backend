@@ -301,6 +301,90 @@ class ScenarioViewSet(viewsets.ModelViewSet):
         if scenario_type:
             queryset = queryset.filter(scenario_type=scenario_type)
         return queryset
+    
+
+class WellViewSet(viewsets.ModelViewSet):
+    """
+    Well information
+
+    Permissions: IsAdminUser | ReadOnly (Admin users can do all operations, others can use HEAD and GET)
+    """
+
+    permission_classes = [IsAdminUser | ReadOnly]
+    serializer_class = serializers.WellSerializer
+
+    def get_queryset(self):
+        queryset = models.Well.objects.all()
+
+        flow_model = self.request.query_params.get("flow_model", False)
+        rch_type = self.request.query_params.get("rch_type", False)
+        well_type = self.request.query_params.get("well_type", False)
+        eid = self.request.query_params.get("eid", False)
+        depth_range_min = self.request.query_params.get("depth_range_min", False)
+        depth_range_max = self.request.query_params.get("depth_range_max", False)
+        unsat_range_min = self.request.query_params.get("unsat_range_min", False)
+        unsat_range_max = self.request.query_params.get("unsat_range_max", False)
+        basin = self.request.query_params.getlist("basin", False)
+        county = self.request.query_params.getlist("county", False)
+        b118 = self.request.query_params.getlist("b118", False)
+        tship = self.request.query_params.getlist("tship", False)
+        subreg = self.request.query_params.getlist("subreg", False)
+
+        if flow_model:
+            queryset = queryset.filter(flow_model=flow_model)
+
+        if rch_type:
+            queryset = queryset.filter(rch_type=rch_type)
+
+        if well_type:
+            queryset = queryset.filter(well_type=well_type)
+
+        if eid:
+            queryset = queryset.filter(eid=eid)
+
+        if depth_range_min:
+            queryset = queryset.filter(depth__gte=depth_range_min)
+
+        if depth_range_max:
+            queryset = queryset.filter(depth__lte=depth_range_max)
+
+        if unsat_range_min:
+            queryset = queryset.filter(unsat__gte=unsat_range_min)
+
+        if unsat_range_max:
+            queryset = queryset.filter(unsat__lte=unsat_range_max)
+
+        if basin:
+            query = Q()
+            for b in basin:
+                query.add(Q(basin=b), Q.OR)
+            queryset = queryset.filter(query)
+
+        if county:
+            query = Q()
+            for c in county:
+                query.add(Q(county=c), Q.OR)
+            queryset = queryset.filter(query)
+
+        if b118:
+            query = Q()
+            for b in b118:
+                query.add(Q(basin=b), Q.OR)
+            queryset = queryset.filter(query)
+
+        if tship:
+            query = Q()
+            for t in b118:
+                query.add(Q(basin=t), Q.OR)
+            queryset = queryset.filter(query)
+        
+        if subreg:
+            query = Q()
+            for s in subreg:
+                query.add(Q(subreg=s), Q.OR)
+            queryset = queryset.filter(query)
+
+        return queryset
 
 
 class CropViewSet(viewsets.ModelViewSet):

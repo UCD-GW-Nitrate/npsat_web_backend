@@ -213,6 +213,33 @@ class Scenario(models.Model):
         return self.name
 
 
+class Well(models.Model):
+    """
+    well table, used for well count calculation
+    """
+
+    flow_model = models.CharField(max_length=255, null=False, blank=False)
+    rch_type = models.CharField(max_length=255, null=False, blank=False)
+    well_type = models.CharField(max_length=255, null=False, blank=False)
+    eid = models.PositiveIntegerField(null=False, blank=False)
+    x = models.FloatField(null=False, blank=False)
+    y = models.FloatField(null=False, blank=False)
+    lat = models.FloatField(null=False, blank=False)
+    lon = models.FloatField(null=False, blank=False)
+    unsat = models.FloatField(null=False, blank=False)
+    wt2t = models.FloatField(null=False, blank=False)
+    slmod = models.FloatField(null=False, blank=False)
+    depth = models.FloatField(null=False, blank=False)
+    basin = models.CharField(max_length=255, null=False, blank=False)
+    county = models.CharField(max_length=255, null=False, blank=False)
+    b118 = models.CharField(max_length=255, null=False, blank=False)
+    tship = models.CharField(max_length=255, null=False, blank=False)
+    subreg = models.CharField(max_length=255, null=False, blank=False)
+
+    def __str__(self):
+        return self.eid
+
+
 # class AreaGroup(models.Model):
 """
 	Aggregates different areas so they can be referenced together. Won't work as set up - need

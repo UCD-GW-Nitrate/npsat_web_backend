@@ -20,6 +20,7 @@ def load_all_data():
     load_crops()
     load_regions()
     load_scenarios()
+    load_wells()
 
 
 def load_system_admin_bot():
@@ -44,6 +45,75 @@ def load_regions():
     load_basins()
     load_townships()
     load_b118_basin()
+
+def load_wells(
+    well_csv=os.path.join(data_folder, "wells", "wells.csv"),
+    flow_model_field = "FlowModel",
+    rch_type_field = "RchType",
+    well_type_field = "WellType",
+    eid_field = "Eid",
+    x_field = "X",
+    y_field = "Y",
+    lat_field = "Lat",
+    lon_field = "Lon",
+    unsat_field = "UNSAT",
+    wt2t_field = "WT2T",
+    slmod_field = "SLmod",
+    basin_field = "Basin",
+    county_field = "County",
+    b118_field = "B118",
+    tship_field = "Tship",
+    subReg_field = "SubReg",
+):
+    with open(well_csv, "r") as csv_data:
+        well_list = csv.DictReader(csv_data)
+
+        for record in well_list:
+            try:
+                well = models.Well.objects.get(
+                    flow_model=record[flow_model_field],
+                    rch_type=record[rch_type_field],
+                    well_type=record[well_type_field],
+                    eid=record[eid_field],
+                    x=record[x_field],
+                    y=record[y_field],
+                    lat=record[lat_field],
+                    lon=record[lon_field],
+                    unsat=record[unsat_field],
+                    wt2t=record[wt2t_field],
+                    slmod=record[slmod_field],
+                    basin=record[basin_field],
+                    county=record[county_field],
+                    b118=record[b118_field],
+                    tship=record[tship_field],
+                    subreg=record[subReg_field],
+                )
+                well.depth = float(record[unsat_field]) + float(record[wt2t_field]) + float(record[slmod_field])
+                well.save()
+                print("updating depth " + str(well.eid))
+                continue
+            except models.Well.DoesNotExist:
+                well = models.Well(
+                    flow_model=record[flow_model_field],
+                    rch_type=record[rch_type_field],
+                    well_type=record[well_type_field],
+                    eid=record[eid_field],
+                    x=record[x_field],
+                    y=record[y_field],
+                    lat=record[lat_field],
+                    lon=record[lon_field],
+                    unsat=record[unsat_field],
+                    wt2t=record[wt2t_field],
+                    slmod=record[slmod_field],
+                    depth=float(record[unsat_field]) + float(record[wt2t_field]) + float(record[slmod_field]),
+                    basin=record[basin_field],
+                    county=record[county_field],
+                    b118=record[b118_field],
+                    tship=record[tship_field],
+                    subreg=record[subReg_field],
+                )
+                well.save()
+                print("new " + str(well.eid))
 
 
 def load_crops(
