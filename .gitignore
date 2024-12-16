@@ -200,3 +200,6 @@ npsat_backend/databases.py
 virtualenv/
 pyvenv.cfg
 npsat_manager/migrations/
+
+# Large data files
+npsat_manager/data/wells/wells.csv

@@ -82,15 +82,14 @@ def load_wells(
                     unsat=record[unsat_field],
                     wt2t=record[wt2t_field],
                     slmod=record[slmod_field],
+                    depth=float(record[unsat_field]) + float(record[wt2t_field]) + float(record[slmod_field]),
                     basin=record[basin_field],
                     county=record[county_field],
                     b118=record[b118_field],
                     tship=record[tship_field],
                     subreg=record[subReg_field],
                 )
-                well.depth = float(record[unsat_field]) + float(record[wt2t_field]) + float(record[slmod_field])
-                well.save()
-                print("updating depth " + str(well.eid))
+                print("existing " + str(well.eid))
                 continue
             except models.Well.DoesNotExist:
                 well = models.Well(
