@@ -245,6 +245,7 @@ class CompletedRunResultWithValuesSerializer(serializers.ModelSerializer):
             "n_wells",
             "public",
             "is_base",
+            "mantis_version",
         )
 
 
@@ -292,7 +293,8 @@ class RunResultSerializer(serializers.ModelSerializer):
             "depth_range_min",
             "depth_range_max",
             "unsat_range_min",
-            "unsat_range_max"
+            "unsat_range_max",
+            "mantis_version",
         )
         depth = 0  # should mean that modifications get included in the initial request
         extra_kwargs = {"user": {"required": False}}
@@ -316,6 +318,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         depth_range_max = validated_data.get("depth_range_max", None)
         unsat_range_min = validated_data.get("unsat_range_min", None)
         unsat_range_max = validated_data.get("unsat_range_max", None)
+        mantis_version = validated_data.get("mantis_version", None)
 
 
         # check if there is a BAU created by CURRENT USER
@@ -331,6 +334,7 @@ class RunResultSerializer(serializers.ModelSerializer):
         BAU_condition &= Q(water_content=water_content)
         BAU_condition &= Q(porosity=porosity)
         BAU_condition &= Q(applied_simulation_filter=applied_simulation_filter)
+        BAU_condition &= Q(mantis_version=mantis_version)
         if (applied_simulation_filter):
             BAU_condition &= Q(depth_range_min=depth_range_min)
             BAU_condition &= Q(depth_range_max=depth_range_max)
@@ -366,6 +370,7 @@ class RunResultSerializer(serializers.ModelSerializer):
                     depth_range_max=depth_range_max,
                     unsat_range_min=unsat_range_min,
                     unsat_range_max=unsat_range_max,
+                    mantis_version=mantis_version,
                 )
             else:
                 BAU_model = models.ModelRun.objects.create(
@@ -386,6 +391,7 @@ class RunResultSerializer(serializers.ModelSerializer):
                     water_content=water_content,
                     porosity=porosity,
                     applied_simulation_filter=applied_simulation_filter,
+                    mantis_version=mantis_version,
                 )
             for region in regions_data:
                 BAU_model.regions.add(models.Region.objects.get(id=region["id"]))

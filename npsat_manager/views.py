@@ -521,6 +521,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 unsat_range_min=instance.unsat_range_min,
                 unsat_range_max=instance.unsat_range_max,
                 sim_end_year=instance.sim_end_year,
+                mantis_version=instance.mantis_version,
             )
 
             print("base model")

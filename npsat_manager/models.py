@@ -313,6 +313,7 @@ class ModelRun(models.Model):
     reduction_end_year = models.IntegerField(default=2025, blank=True)
     water_content = models.DecimalField(max_digits=5, decimal_places=4, default=0)
     porosity = models.IntegerField(default=10, blank=True)
+    mantis_version = models.CharField(max_length=255, null=False, blank=False)
 
     # methods to narrow the simulation ranges
     applied_simulation_filter = models.BooleanField(null=False, default=False, blank=False)
