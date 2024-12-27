@@ -329,6 +329,10 @@ class WellViewSet(viewsets.ModelViewSet):
         b118 = self.request.query_params.getlist("b118", False)
         tship = self.request.query_params.getlist("tship", False)
         subreg = self.request.query_params.getlist("subreg", False)
+        min_depth = self.request.query_params.getlist("min_depth", False)
+        max_depth = self.request.query_params.getlist("max_depth", False)
+        min_unsat = self.request.query_params.getlist("min_unsat", False)
+        max_unsat = self.request.query_params.getlist("max_unsat", False)
 
         if flow_model:
             queryset = queryset.filter(flow_model=flow_model)
@@ -369,13 +373,13 @@ class WellViewSet(viewsets.ModelViewSet):
         if b118:
             query = Q()
             for b in b118:
-                query.add(Q(basin=b), Q.OR)
+                query.add(Q(b118=b), Q.OR)
             queryset = queryset.filter(query)
 
         if tship:
             query = Q()
-            for t in b118:
-                query.add(Q(basin=t), Q.OR)
+            for t in tship:
+                query.add(Q(tship=t), Q.OR)
             queryset = queryset.filter(query)
         
         if subreg:
@@ -383,6 +387,22 @@ class WellViewSet(viewsets.ModelViewSet):
             for s in subreg:
                 query.add(Q(subreg=s), Q.OR)
             queryset = queryset.filter(query)
+
+        if min_unsat:
+            queryset = queryset.order_by('unsat')
+            queryset = queryset.filter(Q(id=queryset.first().id))
+
+        if max_unsat:
+            queryset = queryset.order_by('unsat')
+            queryset = queryset.filter(Q(id=queryset.last().id))
+
+        if min_depth:
+            queryset = queryset.order_by('depth')
+            queryset = queryset.filter(Q(id=queryset.first().id))
+
+        if max_depth:
+            queryset = queryset.order_by('depth')
+            queryset = queryset.filter(Q(id=queryset.last().id))
 
         return queryset
 
