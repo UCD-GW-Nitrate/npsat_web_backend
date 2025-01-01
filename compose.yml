@@ -1,0 +1,34 @@
+services:
+  web:
+    image: npsat-backend:latest
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8010"]
+    volumes:
+      - .:/app
+    ports:
+      - "8010:8010"
+    depends_on:
+      - npsat-db
+
+  npsat-db:
+    image: postgres
+    restart: always
+    env_file:
+      - ./database.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - npsat-db-data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+volumes:
+  npsat-db-data:

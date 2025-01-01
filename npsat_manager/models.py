@@ -644,6 +644,7 @@ def process_results(results, model_run):
         log.error(
             error_message
         )  # log it as an error too so it goes to all the appropriate handlers
+        model_run.save()
         return
     # OK, now we should be safe to proceed
     # we're going to make a 2 dimensional numpy array where every row is a well and every column is a year
