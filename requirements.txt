@@ -11,5 +11,5 @@ requests==2.32.3
 drf-yasg==1.21.7
 pyyaml==6.0.2
 uritemplate==4.1.1
-numba==0.60.0
+numba
 numpy==2.0.1
