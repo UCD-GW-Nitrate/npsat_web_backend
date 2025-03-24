@@ -51,7 +51,7 @@ class SendVerificationEmail(generics.UpdateAPIView):
     """Send a verification email to the user."""
     permission_classes = [permissions.IsAuthenticated]
 
-    def put(self):
+    def put(self, request):
         self.request.user.verification_code = str(randrange(100000, 999999))
         self.request.user.save()
 
