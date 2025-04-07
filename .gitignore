@@ -204,3 +204,4 @@ npsat_manager/migrations/
 
 # Large data files
 npsat_manager/data/wells/wells.csv
+db.sqlite3python

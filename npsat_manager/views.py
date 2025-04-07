@@ -101,7 +101,9 @@ class VerifyCode(generics.UpdateAPIView):
             raise APIException("Invalid code")
         
         token, created = Token.objects.get_or_create(user=user)
-        
+        user.is_verified = 1
+        user.save()
+
         return Response(
             {
                 "token": token.key,
