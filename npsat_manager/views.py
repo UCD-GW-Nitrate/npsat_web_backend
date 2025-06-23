@@ -193,6 +193,16 @@ class FeedOnDashboard(APIView):
             status=models.ModelRun.COMPLETED,
             is_base=False,
         ).order_by("-date_completed")
+
+        pending_models = models.ModelRun.objects.filter(
+            user=self.request.user,
+            status__in=[models.ModelRun.READY, models.ModelRun.RUNNING],
+            is_base=False,
+        ).order_by("-date_submitted")
+
+        all_models = completed_models | pending_models
+        pending_model_ids = pending_models.values_list('id', flat=True)
+
         recent_published_models = (
             models.ModelRun.objects.exclude(user=self.request.user)
             .filter(public=True)
@@ -218,9 +228,10 @@ class FeedOnDashboard(APIView):
         # updates information
         return Response(
             {
-                "recent_completed_models": serializers.RunResultSerializer(
-                    completed_models, many=True
+                "recent_models": serializers.RunResultSerializer(
+                    all_models, many=True
                 ).data,
+                "pending_model_ids": pending_model_ids,
                 "recent_published_models": serializers.RunResultSerializer(
                     recent_published_models, many=True
                 ).data,
@@ -508,7 +519,6 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         return context
 
     def retrieve(self, request, *args, **kwargs):
-        print("getting base and model")
         serializer = None
         instance = self.get_object()
         # check if user have permission reading this model
@@ -522,8 +532,6 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         include_base = self.request.query_params.get("includeBase", False)
         base_model = None
 
-        print(include_base)
-        print(instance.is_base)
 
         if include_base and not instance.is_base:
             context=self.get_serializer_context()
@@ -546,20 +554,14 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 mantis_version=instance.mantis_version,
             )
 
-            print("base model")
-            print(base_model)
 
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)
 
-            print("base model2")
-            print(base_model)
 
             if len(base_model) != 0:
                 base_model = base_model[0]
 
-            print("base model3")
-            print(base_model)
 
         if base_model and include_base:
             serializer = self.get_serializer([instance, base_model], many=True)
