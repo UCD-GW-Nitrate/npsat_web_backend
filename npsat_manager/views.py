@@ -11,6 +11,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import APIException
+from rest_framework.decorators import action
 
 import logging
 
@@ -26,6 +27,7 @@ from django.conf import settings
 from random import randrange
 
 from django.http import HttpResponse
+from django.db import connections
 from django.db.models import Q
 
 log = logging.getLogger("npsat.manager")
@@ -696,3 +698,106 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             serializer = self.get_serializer(models.ResultPercentile.objects.all(), many=True)
         return Response(serializer.data)
 
+
+class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
+    @action(detail=False, methods=['post'])
+    def region_wells(self, request):  
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        bmap_idx = request.data.get('bmap')
+        idmap = request.data.get('idmap')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
+
+        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT Eid, Lat, Lon, Year, Q_m3d, UNSATcond, WT2T, SLmod FROM {table_name} WHERE {bmap_arr[bmap_idx]} = %s
+            """
+
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [idmap]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return Response(results)
+    
+    @action(detail=False, methods=['post'])
+    def well_urf_data(self, request):    
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        eid = request.data.get('eid')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or eid is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+
+        table_name="urf_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT Sid, Lat, Lon, Len, InRiver, WT2D, Age_a, Age_b FROM {table_name} WHERE eid = %s
+            """
+
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [eid]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return Response(results)
+    
+    @action(detail=False, methods=['post'])
+    def get_wells_by_age_thres(self, request):    
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        bmap_idx = request.data.get('bmap')
+        idmap = request.data.get('idmap')
+        por = request.data.get('por')
+        agethres = request.data.get('agethres')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None or por is None or agethres is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
+
+        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+        urf_table_name="urf_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT w.Eid, w.Lat, w.Lon, w.Year, w.Q_m3d, w.UNSATcond, w.WT2T, w.SLmod, x.age
+            FROM {table_name} w
+            INNER JOIN (
+                SELECT u.eid, COUNT(%s * Age_a + Age_b) AS age
+                FROM {urf_table_name} u
+                WHERE %s * Age_a + Age_b > %s
+                GROUP BY u.eid
+            ) AS x ON x.eid = w.eid
+            WHERE w.{bmap_arr[bmap_idx]} = %s
+            ORDER BY w.Eid
+            """
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [por, por, agethres, idmap]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return Response(results)
