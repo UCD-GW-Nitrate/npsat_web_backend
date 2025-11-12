@@ -9,7 +9,11 @@ import numpy
 import django
 from django.db import models
 from django.core.validators import int_list_validator
-from django.contrib.auth.models import User
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 
 import arrow
 
@@ -18,6 +22,42 @@ from npsat_backend import settings
 # Create your models here.
 
 log = logging.getLogger("npsat.manager")
+
+class UserManager(BaseUserManager):
+    """Manager for users."""
+
+    def create_user(self, email, password=None, **extra_fields):
+        """Create, save and return a new user."""
+        if not email:
+            raise ValueError('User must have an email address.')
+        user = self.model(email=self.normalize_email(email), **extra_fields)
+        user.set_password(password)
+        user.save()
+
+        return user
+
+    def create_superuser(self, email, password):
+        """Create and return a new superuser."""
+        user = self.create_user(email, password)
+        user.is_staff = True
+        user.is_superuser = True
+        user.save()
+
+        return user
+    
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    """User in the system."""
+    email = models.EmailField(max_length=255, unique=True)
+    username = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
+    verification_code = models.CharField(max_length=255, default="")
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
 
 
 class PercentileAggregate(models.Aggregate):
@@ -173,6 +213,33 @@ class Scenario(models.Model):
         return self.name
 
 
+class Well(models.Model):
+    """
+    well table, used for well count calculation
+    """
+
+    flow_model = models.CharField(max_length=255, null=False, blank=False)
+    rch_type = models.CharField(max_length=255, null=False, blank=False)
+    well_type = models.CharField(max_length=255, null=False, blank=False)
+    eid = models.PositiveIntegerField(null=False, blank=False)
+    x = models.FloatField(null=False, blank=False)
+    y = models.FloatField(null=False, blank=False)
+    lat = models.FloatField(null=False, blank=False)
+    lon = models.FloatField(null=False, blank=False)
+    unsat = models.FloatField(null=False, blank=False)
+    wt2t = models.FloatField(null=False, blank=False)
+    slmod = models.FloatField(null=False, blank=False)
+    depth = models.FloatField(null=False, blank=False)
+    basin = models.CharField(max_length=255, null=False, blank=False)
+    county = models.CharField(max_length=255, null=False, blank=False)
+    b118 = models.CharField(max_length=255, null=False, blank=False)
+    tship = models.CharField(max_length=255, null=False, blank=False)
+    subreg = models.CharField(max_length=255, null=False, blank=False)
+
+    def __str__(self):
+        return self.eid
+
+
 # class AreaGroup(models.Model):
 """
 	Aggregates different areas so they can be referenced together. Won't work as set up - need
@@ -229,7 +296,7 @@ class ModelRun(models.Model):
     )
     date_completed = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(
-        User, on_delete=models.DO_NOTHING, related_name="model_runs"
+        CustomUser, on_delete=models.DO_NOTHING, related_name="model_runs"
     )
 
     # global model parameters
@@ -245,6 +312,8 @@ class ModelRun(models.Model):
     reduction_start_year = models.IntegerField(default=2020, blank=True)
     reduction_end_year = models.IntegerField(default=2025, blank=True)
     water_content = models.DecimalField(max_digits=5, decimal_places=4, default=0)
+    porosity = models.IntegerField(default=10, blank=True)
+    mantis_version = models.CharField(max_length=255, null=False, blank=False)
 
     # methods to narrow the simulation ranges
     applied_simulation_filter = models.BooleanField(null=False, default=False, blank=False)
@@ -256,8 +325,8 @@ class ModelRun(models.Model):
 
     # the range should be between 0 - 801;
     # 801 is reserved for the maximum value possible, when passing to message to mantis, set it to 10000
-    screen_length_range_max = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
-    screen_length_range_min = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
+    unsat_range_max = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
+    unsat_range_min = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
 
     # scenarios
     # here we use explicit fields and set a limit to each
@@ -331,6 +400,7 @@ class ModelRun(models.Model):
         msg += f" unsatScen {self.unsat_scenario.mantis_id}"
         msg += f" wellType {self.welltype_scenario.mantis_id}"
         msg += f" unsatWC {self.water_content}"
+        msg += f" por {self.porosity}"
 
         regions = list(
             self.regions.all()
@@ -387,9 +457,9 @@ class ModelRun(models.Model):
                 range_max = str(self.depth_range_max) if self.depth_range_max != 801 else "10000"
                 msg += f" DepthRange {str(self.depth_range_min)} {range_max}"
 
-            if self.screen_length_range_min is not None and self.screen_length_range_max is not None:
-                range_max = str(self.screen_length_range_max) if self.depth_range_max != 801 else "10000"
-                msg += f" ScreenLenRange {str(self.screen_length_range_min)} {range_max}"
+            if self.unsat_range_min is not None and self.unsat_range_max is not None:
+                range_max = str(self.unsat_range_max) if self.depth_range_max != 801 else "10000"
+                msg += f" UnsatRange {str(self.unsat_range_min)} {range_max}"
 
         msg += " ENDofMSG\n"
         return msg
@@ -571,6 +641,9 @@ def process_results(results, model_run):
         3:-1
     ]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
     # we need to have a number of results divisible by the number of wells and the number of years, so do some checks
+    log.info(len(results_values))
+    log.info(n_years)
+    log.info(model_run.n_wells)
     if (
         len(results_values) % n_years != 0
         or (len(results_values) / model_run.n_wells) != n_years
@@ -581,11 +654,12 @@ def process_results(results, model_run):
         log.error(
             error_message
         )  # log it as an error too so it goes to all the appropriate handlers
+        model_run.save()
         return
     # OK, now we should be safe to proceed
     # we're going to make a 2 dimensional numpy array where every row is a well and every column is a year
     # start by making it a numpy array and convert to float by default
-    results_array = numpy.array(results_values, dtype=numpy.float)
+    results_array = numpy.array(results_values, dtype=float)
     results_2d = results_array.reshape(model_run.n_wells, n_years)
 
     # first store the raw simulation run

@@ -91,6 +91,7 @@ celerybeat-schedule
 # Environments
 .env
 .venv
+database.env
 env/
 venv/
 ENV/
@@ -200,3 +201,7 @@ npsat_backend/databases.py
 virtualenv/
 pyvenv.cfg
 npsat_manager/migrations/
+
+# Large data files
+npsat_manager/data/wells/wells.csv
+db.sqlite3python

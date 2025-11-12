@@ -9,7 +9,9 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 from npsat_backend.local_settings import *
-from datetime import timedelta
+import certifi, os
+
+os.environ["SSL_CERT_FILE"] = certifi.where()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -49,15 +51,10 @@ INSTALLED_APPS = [
     "npsat_manager",
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_framework_simplejwt.token_blacklist",
+    "django.core.mail",
+    #'django_extensions',
     #'drf_yasg',  # django rest framework schema generator
 ]
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
-}
 
 #set settings.ALLOWED_HOSTS if DEBUG is False --Michael
 if DEBUG:
@@ -133,6 +130,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "npsat_backend.wsgi.application"
 
+AUTH_USER_MODEL = 'npsat_manager.CustomUser'
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -229,45 +227,3 @@ LOGGING = {
         },
     },
 }
-
-# SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'cy-$09=nyil!_ohoaz^9gs*3-ue4ls-0ibmg!b%%p9j5j)%0t1'
-
-# SIMPLE_JWT = {
-#     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
-#     "REFRESH_TOKEN_LIFETIME": timedelta(days=100),
-#     "ROTATE_REFRESH_TOKENS": True,
-#     "BLACKLIST_AFTER_ROTATION": True,
-#     "UPDATE_LAST_LOGIN": False,
-
-#     "ALGORITHM": "HS256",
-#     "VERIFYING_KEY": "",
-#     "AUDIENCE": None,
-#     "ISSUER": None,
-#     "JSON_ENCODER": None,
-#     "JWK_URL": None,
-#     "LEEWAY": 0,
-
-#     "AUTH_HEADER_TYPES": ("Bearer",),
-#     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-#     "USER_ID_FIELD": "id",
-#     "USER_ID_CLAIM": "user_id",
-#     "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
-
-#     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-#     "TOKEN_TYPE_CLAIM": "token_type",
-#     "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
-
-#     "JTI_CLAIM": "jti",
-
-#     "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-#     "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
-#     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
-
-#     "TOKEN_OBTAIN_SERIALIZER": "npsat_manager.serializers.MyTokenObtainPairSerializer",
-#     "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
-#     "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
-#     "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
-#     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
-#     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
-# }

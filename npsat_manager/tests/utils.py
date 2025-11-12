@@ -10,7 +10,7 @@ Note:
 """
 
 from npsat_manager import models
-from django.contrib.auth.models import User
+from npsat_manager.models import CustomUser
 from npsat_manager import load_data
 from npsat_backend import settings
 import os
@@ -292,12 +292,12 @@ def load_test_users():
     """
     This function loads 3 test normal users and 1 admin user
     """
-    User.objects.create(username="test_user1", password="user1").save()
-    User.objects.create(username="test_user2", password="user2").save()
-    User.objects.create(username="test_user3", password="user3").save()
+    CustomUser.objects.create(username="test_user1", password="user1").save()
+    CustomUser.objects.create(username="test_user2", password="user2").save()
+    CustomUser.objects.create(username="test_user3", password="user3").save()
 
-    User.objects.create(username="test_admin", password="admin").save()
-    User.objects.create(username="service bot", password="admin").save()
+    CustomUser.objects.create(username="test_admin", password="admin").save()
+    CustomUser.objects.create(username="service bot", password="admin").save()
 
 
 def load_default_model_runs():
@@ -316,8 +316,8 @@ def load_default_model_runs():
     load_data.load_system_admin_bot()
     # ensure admin presents in the database
     try:
-        admin = User.objects.get(username="test_admin")
-        test_user1 = User.objects.get(username="test_user1")
+        admin = CustomUser.objects.get(username="test_admin")
+        test_user1 = CustomUser.objects.get(username="test_user1")
     except Exception as e:
         print(str(e))
         print("Error in retrieving admin user. Abort")

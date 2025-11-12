@@ -22,10 +22,6 @@ from npsat_manager import views
 from rest_framework import permissions
 from rest_framework.schemas import get_schema_view as drf_get_schema_view
 
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
-
 # from drf_yasg.views import get_schema_view
 # from drf_yasg import openapi
 
@@ -49,6 +45,7 @@ router.register(r"region", views.RegionViewSet, basename="Region")
 router.register(r"model_run", views.ModelRunViewSet, basename="ModelRun")
 router.register(r"modification", views.ModificationViewSet, basename="Modification")
 router.register(r"scenario", views.ScenarioViewSet, basename="Scenario")
+router.register(r"well", views.WellViewSet, basename="Well")
 router.register(
     r"model_result", views.ResultPercentileViewSet, basename="ResultPercentile"
 )
@@ -59,9 +56,12 @@ router.register(r'well_explorer', views.WellExplorerViewset, basename='WellExplo
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('api/token/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     re_path(r"^api/", include(router.urls)),
+    re_path(r"^api/user/me/", views.ManageUserView.as_view()),
+    re_path(r"^api/user/verify/", views.SendVerificationEmail.as_view()),
+    re_path(r"^unauthorized-verify/", views.SendUnauthenticatedVerificationEmail.as_view()),
+    re_path(r"^verify-code/", views.VerifyCode.as_view()),
+    re_path(r"^register-user/", views.CreateUserView.as_view()),
     re_path(
         r"^api-token-auth/", views.CustomAuthToken.as_view()
     ),  # POST a username and password here, get a token back

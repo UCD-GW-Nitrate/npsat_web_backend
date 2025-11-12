@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, generics, authentication, permissions
 from rest_framework.permissions import (
     BasePermission,
     IsAuthenticated,
@@ -11,6 +11,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import APIException
+from rest_framework.decorators import action
 
 import logging
 
@@ -27,14 +28,96 @@ from random import randrange
 import numpy
 
 from django.http import HttpResponse
+from django.db import connections
 from django.db.models import Q
-from django.contrib.auth.models import User
-from rest_framework_simplejwt.views import TokenObtainPairView
 
 log = logging.getLogger("npsat.manager")
 
-class MyTokenObtainPairView(TokenObtainPairView):
-    serializer_class = serializers.MyTokenObtainPairSerializer
+class CreateUserView(generics.CreateAPIView):
+    """Create a new user in the system."""
+    permission_classes = [permissions.AllowAny]
+    serializer_class = serializers.UserSerializer
+
+    def post(self, request):
+        """Create a new user."""
+        request.data["verification_code"] = str(randrange(100000, 999999))
+        send_mail(
+            "Verify your NPSAT account",
+            "Your verification code is: " + request.data["verification_code"],
+            settings.EMAIL_HOST_USER,
+            [request.data["email"]],
+            fail_silently=True,
+        )
+        return super().post(request)
+    
+class SendVerificationEmail(generics.UpdateAPIView):
+    """Send a verification email to the user."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        self.request.user.verification_code = str(randrange(100000, 999999))
+        self.request.user.save()
+
+        response = send_mail(
+            "Verify your NPSAT account",
+            "Your verification code is: " + self.request.user.verification_code,
+            settings.EMAIL_HOST_USER,
+            [self.request.user.email],
+            fail_silently=False,
+        )
+        return Response({"response": response})
+    
+class SendUnauthenticatedVerificationEmail(generics.UpdateAPIView):
+    """Send a verification email to the user."""
+    permission_classes = [permissions.AllowAny]
+
+    def put(self, request):
+        users = models.CustomUser.objects.filter(email=request.data["email"])
+        if (users.count() == 0):
+            raise APIException("User not found")
+        
+        user = users[0]
+        user.verification_code = str(randrange(100000, 999999))
+        user.save()
+
+        response = send_mail(
+            "Verify your NPSAT account",
+            "Your verification code is: " + user.verification_code,
+            settings.EMAIL_HOST_USER,
+            [user.email],
+            fail_silently=False,
+        )
+        return Response({"response": response})
+    
+class VerifyCode(generics.UpdateAPIView):
+    """Verify the user's code."""
+    permission_classes = [permissions.AllowAny]
+
+    def put(self, request):
+        users = models.CustomUser.objects.filter(email=request.data["email"])
+        if (users.count() == 0):
+            raise APIException("User not found")
+        
+        user = users[0]
+
+        if (user.verification_code != request.data["verification_code"]):
+            raise APIException("Invalid code")
+        
+        token, created = Token.objects.get_or_create(user=user)
+        user.is_verified = 1
+        user.save()
+
+        return Response(
+            {
+                "token": token.key,
+                "user_id": user.pk,
+                "username": user.username,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "is_verified": user.is_verified,
+                "email": user.email,
+            }
+        )
 
 class CustomAuthToken(ObtainAuthToken):
     """
@@ -43,7 +126,8 @@ class CustomAuthToken(ObtainAuthToken):
     """
 
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
+        serializer_class = serializers.AuthTokenSerializer
+        serializer = serializer_class(
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
@@ -56,9 +140,20 @@ class CustomAuthToken(ObtainAuthToken):
                 "username": user.username,
                 "is_staff": user.is_staff,
                 "is_superuser": user.is_superuser,
+                "is_verified": user.is_verified,
                 "email": user.email,
             }
         )
+    
+class ManageUserView(generics.RetrieveUpdateAPIView):
+    """Manage the authenticated user."""
+    serializer_class = serializers.UserSerializer
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Retrieve and return the authenticated user."""
+        return self.request.user
 
 
 class ReadOnly(BasePermission):
@@ -101,6 +196,16 @@ class FeedOnDashboard(APIView):
             status=models.ModelRun.COMPLETED,
             is_base=False,
         ).order_by("-date_completed")
+
+        pending_models = models.ModelRun.objects.filter(
+            user=self.request.user,
+            status__in=[models.ModelRun.READY, models.ModelRun.RUNNING],
+            is_base=False,
+        ).order_by("-date_submitted")
+
+        all_models = completed_models | pending_models
+        pending_model_ids = pending_models.values_list('id', flat=True)
+
         recent_published_models = (
             models.ModelRun.objects.exclude(user=self.request.user)
             .filter(public=True)
@@ -126,9 +231,10 @@ class FeedOnDashboard(APIView):
         # updates information
         return Response(
             {
-                "recent_completed_models": serializers.RunResultSerializer(
-                    completed_models, many=True
+                "recent_models": serializers.RunResultSerializer(
+                    all_models, many=True
                 ).data,
+                "pending_model_ids": pending_model_ids,
                 "recent_published_models": serializers.RunResultSerializer(
                     recent_published_models, many=True
                 ).data,
@@ -210,6 +316,110 @@ class ScenarioViewSet(viewsets.ModelViewSet):
         scenario_type = self.request.query_params.get("scenario_type", False)
         if scenario_type:
             queryset = queryset.filter(scenario_type=scenario_type)
+        return queryset
+    
+
+class WellViewSet(viewsets.ModelViewSet):
+    """
+    Well information
+
+    Permissions: IsAdminUser | ReadOnly (Admin users can do all operations, others can use HEAD and GET)
+    """
+
+    permission_classes = [IsAdminUser | ReadOnly]
+    serializer_class = serializers.WellSerializer
+
+    def get_queryset(self):
+        queryset = models.Well.objects.all()
+
+        flow_model = self.request.query_params.get("flow_model", False)
+        rch_type = self.request.query_params.get("rch_type", False)
+        well_type = self.request.query_params.get("well_type", False)
+        eid = self.request.query_params.get("eid", False)
+        depth_range_min = self.request.query_params.get("depth_range_min", False)
+        depth_range_max = self.request.query_params.get("depth_range_max", False)
+        unsat_range_min = self.request.query_params.get("unsat_range_min", False)
+        unsat_range_max = self.request.query_params.get("unsat_range_max", False)
+        basin = self.request.query_params.getlist("basin", False)
+        county = self.request.query_params.getlist("county", False)
+        b118 = self.request.query_params.getlist("b118", False)
+        tship = self.request.query_params.getlist("tship", False)
+        subreg = self.request.query_params.getlist("subreg", False)
+        min_depth = self.request.query_params.getlist("min_depth", False)
+        max_depth = self.request.query_params.getlist("max_depth", False)
+        min_unsat = self.request.query_params.getlist("min_unsat", False)
+        max_unsat = self.request.query_params.getlist("max_unsat", False)
+
+        if flow_model:
+            queryset = queryset.filter(flow_model=flow_model)
+
+        if rch_type:
+            queryset = queryset.filter(rch_type=rch_type)
+
+        if well_type:
+            queryset = queryset.filter(well_type=well_type)
+
+        if eid:
+            queryset = queryset.filter(eid=eid)
+
+        if depth_range_min:
+            queryset = queryset.filter(depth__gte=depth_range_min)
+
+        if depth_range_max:
+            queryset = queryset.filter(depth__lte=depth_range_max)
+
+        if unsat_range_min:
+            queryset = queryset.filter(unsat__gte=unsat_range_min)
+
+        if unsat_range_max:
+            queryset = queryset.filter(unsat__lte=unsat_range_max)
+
+        if basin:
+            query = Q()
+            for b in basin:
+                query.add(Q(basin=b), Q.OR)
+            queryset = queryset.filter(query)
+
+        if county:
+            query = Q()
+            for c in county:
+                query.add(Q(county=c), Q.OR)
+            queryset = queryset.filter(query)
+
+        if b118:
+            query = Q()
+            for b in b118:
+                query.add(Q(b118=b), Q.OR)
+            queryset = queryset.filter(query)
+
+        if tship:
+            query = Q()
+            for t in tship:
+                query.add(Q(tship=t), Q.OR)
+            queryset = queryset.filter(query)
+        
+        if subreg:
+            query = Q()
+            for s in subreg:
+                query.add(Q(subreg=s), Q.OR)
+            queryset = queryset.filter(query)
+
+        if min_unsat:
+            queryset = queryset.order_by('unsat')
+            queryset = queryset.filter(Q(id=queryset.first().id))
+
+        if max_unsat:
+            queryset = queryset.order_by('unsat')
+            queryset = queryset.filter(Q(id=queryset.last().id))
+
+        if min_depth:
+            queryset = queryset.order_by('depth')
+            queryset = queryset.filter(Q(id=queryset.first().id))
+
+        if max_depth:
+            queryset = queryset.order_by('depth')
+            queryset = queryset.filter(Q(id=queryset.last().id))
+
         return queryset
 
 
@@ -303,7 +513,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated & ModifyAccessPermission]
-    http_method_names = ["get", "post", "put", "delete", "head", "options"]
+    http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
     serializer_class = serializers.RunResultSerializer
 
     def get_serializer_context(self):
@@ -312,7 +522,6 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         return context
 
     def retrieve(self, request, *args, **kwargs):
-        print("getting base and model")
         serializer = None
         instance = self.get_object()
         # check if user have permission reading this model
@@ -326,8 +535,6 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         include_base = self.request.query_params.get("includeBase", False)
         base_model = None
 
-        print(include_base)
-        print(instance.is_base)
 
         if include_base and not instance.is_base:
             context=self.get_serializer_context()
@@ -341,34 +548,30 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                 #user=User.objects.get(username=local_settings.ADMIN_BOT_USERNAME),
                 user=context["user"],# allow current user to compare and delete BAU created by himself
                 water_content=instance.water_content,
+                porosity=instance.porosity,
                 depth_range_min=instance.depth_range_min,
                 depth_range_max=instance.depth_range_max,
-                screen_length_range_min=instance.screen_length_range_min,
-                screen_length_range_max=instance.screen_length_range_max,
+                unsat_range_min=instance.unsat_range_min,
+                unsat_range_max=instance.unsat_range_max,
                 sim_end_year=instance.sim_end_year,
+                mantis_version=instance.mantis_version,
             )
 
-            print("base model")
-            print(base_model)
 
             for region in instance.regions.all():
                 base_model = base_model.filter(regions=region)
 
-            print("base model2")
-            print(base_model)
 
             if len(base_model) != 0:
                 base_model = base_model[0]
 
-            print("base model3")
-            print(base_model)
 
         if base_model and include_base:
             serializer = self.get_serializer([instance, base_model], many=True)
         elif not base_model and include_base:
             raise APIException("Base model is not found!")
         else:
-            serializer = self.get_serializer(instance)
+            serializer = self.get_serializer(instance, many=True)
         return Response(serializer.data)
     
     def list(self, response):
@@ -446,7 +649,6 @@ class ModelRunViewSet(viewsets.ModelViewSet):
                     return results.order_by("-" + sorter_field)
 
         return results.order_by("-id")
-
 
 class ModificationViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -575,3 +777,106 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response(percentile_map)
 
+
+class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
+    @action(detail=False, methods=['post'])
+    def region_wells(self, request):  
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        bmap_idx = request.data.get('bmap')
+        idmap = request.data.get('idmap')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
+
+        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT Eid, Lat, Lon, Year, Q_m3d, UNSATcond, WT2T, SLmod FROM {table_name} WHERE {bmap_arr[bmap_idx]} = %s
+            """
+
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [idmap]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return Response(results)
+    
+    @action(detail=False, methods=['post'])
+    def well_urf_data(self, request):    
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        eid = request.data.get('eid')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or eid is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+
+        table_name="urf_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT Sid, Lat, Lon, Len, InRiver, WT2D, Age_a, Age_b FROM {table_name} WHERE eid = %s
+            """
+
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [eid]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return Response(results)
+    
+    @action(detail=False, methods=['post'])
+    def get_wells_by_age_thres(self, request):    
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        bmap_idx = request.data.get('bmap')
+        idmap = request.data.get('idmap')
+        por = request.data.get('por')
+        agethres = request.data.get('agethres')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None or por is None or agethres is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
+
+        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+        urf_table_name="urf_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT w.Eid, w.Lat, w.Lon, w.Year, w.Q_m3d, w.UNSATcond, w.WT2T, w.SLmod, x.age
+            FROM {table_name} w
+            INNER JOIN (
+                SELECT u.eid, COUNT(%s * Age_a + Age_b) AS age
+                FROM {urf_table_name} u
+                WHERE %s * Age_a + Age_b > %s
+                GROUP BY u.eid
+            ) AS x ON x.eid = w.eid
+            WHERE w.{bmap_arr[bmap_idx]} = %s
+            ORDER BY w.Eid
+            """
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [por, por, agethres, idmap]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return Response(results)

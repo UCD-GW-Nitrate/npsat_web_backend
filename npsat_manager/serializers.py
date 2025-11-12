@@ -5,16 +5,71 @@ from rest_framework import serializers
 from npsat_manager import models
 from npsat_backend import local_settings
 from django.db.models import Q
-from django.contrib.auth.models import User
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import (
+    get_user_model,
+    authenticate,
+)
+from npsat_manager.models import CustomUser
 
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['username'] = user.username
 
-        return token
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for the user object."""
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email', 'password', 'username', 'is_verified', 'verification_code']
+        extra_kwargs = {
+            'password': {'write_only': True}, 
+            'verification_code': {'write_only': True}, 
+            'is_verified': {'read_only': True},
+        }
+
+    def create(self, validated_data):
+        """Create and return a user with encrypted password."""
+        return get_user_model().objects.create_user(**validated_data)
+
+    def update(self, instance, validated_data):
+        """Update and return user."""
+        password = validated_data.pop('password', None)
+        verification_code = validated_data.pop('verification_code', None)
+
+        user = super().update(instance, validated_data)
+
+        if password:
+            user.set_password(password)
+            user.save()
+
+        if verification_code and user.verification_code == verification_code:
+            user.is_verified = True
+            user.save()
+
+        return user
+
+
+class AuthTokenSerializer(serializers.Serializer):
+    """Serializer for the user auth token."""
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        style={'input_type': 'password'},
+        trim_whitespace=False,
+    )
+
+    def validate(self, attrs):
+        """Validate and authenticate the user."""
+        email = attrs.get('email')
+        password = attrs.get('password')
+        user = authenticate(
+            request=self.context.get('request'),
+            username=email,
+            password=password,
+        )
+        if not user:
+            msg = _('Unable to authenticate with provided credentials.')
+            raise serializers.ValidationError(msg, code='authorization')
+
+        attrs['user'] = user
+        return attrs
+
 
 class CropSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,7 +80,7 @@ class CropSerializer(serializers.ModelSerializer):
 class NestedCropSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Crop
-        fields = ("id", "name", "caml_code")
+        fields = ("id", "name", "caml_code", "swat_code")
         extra_kwargs = {
             "id": {
                 "read_only": False,
@@ -63,6 +118,30 @@ class NestedRegionSerializer(
             },
             "region_type": {"required": False},
         }
+
+
+class WellSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Well
+        fields = (
+            "flow_model", 
+            "rch_type", 
+            "well_type", 
+            "eid", 
+            "x", 
+            "y", 
+            "lat", 
+            "lon", 
+            "unsat", 
+            "wt2t", 
+            "slmod", 
+            "depth",
+            "basin", 
+            "county", 
+            "b118", 
+            "tship", 
+            "subreg",
+        )
 
 
 class ScenarioSerializer(serializers.ModelSerializer):
@@ -159,12 +238,14 @@ class CompletedRunResultWithValuesSerializer(serializers.ModelSerializer):
             "status_message",
             "sim_end_year",
             "water_content",
+            "porosity",
             "reduction_start_year",
             "reduction_end_year",
             "results",
             "n_wells",
             "public",
             "is_base",
+            "mantis_version",
         )
 
 
@@ -197,6 +278,7 @@ class RunResultSerializer(serializers.ModelSerializer):
             "status_message",
             "sim_end_year",
             "water_content",
+            "porosity",
             "reduction_start_year",
             "reduction_end_year",
             "is_base",
@@ -210,8 +292,9 @@ class RunResultSerializer(serializers.ModelSerializer):
             "applied_simulation_filter",
             "depth_range_min",
             "depth_range_max",
-            "screen_length_range_min",
-            "screen_length_range_max"
+            "unsat_range_min",
+            "unsat_range_max",
+            "mantis_version",
         )
         depth = 0  # should mean that modifications get included in the initial request
         extra_kwargs = {"user": {"required": False}}
@@ -228,16 +311,18 @@ class RunResultSerializer(serializers.ModelSerializer):
         flow_scenario = validated_data.pop("flow_scenario")
         welltype_scenario = validated_data.pop("welltype_scenario")
         water_content = validated_data["water_content"]
+        porosity = validated_data["porosity"]
         sim_end_year = validated_data["sim_end_year"]
-        applied_simulation_filter = validated_data["applied_simulation_filter"]
+        applied_simulation_filter = validated_data.get("applied_simulation_filter", False)
         depth_range_min = validated_data.get("depth_range_min", None)
         depth_range_max = validated_data.get("depth_range_max", None)
-        screen_length_range_min = validated_data.get("screen_length_range_min", None)
-        screen_length_range_max = validated_data.get("screen_length_range_max", None)
+        unsat_range_min = validated_data.get("unsat_range_min", None)
+        unsat_range_max = validated_data.get("unsat_range_max", None)
+        mantis_version = validated_data.get("mantis_version", None)
 
 
         # check if there is a BAU created by CURRENT USER
-        service_bot = User.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
+        service_bot = CustomUser.objects.get(username=local_settings.ADMIN_BOT_USERNAME)
         BAU_condition = Q()
         BAU_condition &= Q(unsat_scenario__id=unsat_scenario["id"])
         BAU_condition &= Q(flow_scenario__id=flow_scenario["id"])
@@ -247,12 +332,14 @@ class RunResultSerializer(serializers.ModelSerializer):
         BAU_condition &= Q(public=True)
         BAU_condition &= Q(user=user)
         BAU_condition &= Q(water_content=water_content)
+        BAU_condition &= Q(porosity=porosity)
         BAU_condition &= Q(applied_simulation_filter=applied_simulation_filter)
+        BAU_condition &= Q(mantis_version=mantis_version)
         if (applied_simulation_filter):
             BAU_condition &= Q(depth_range_min=depth_range_min)
             BAU_condition &= Q(depth_range_max=depth_range_max)
-            BAU_condition &= Q(screen_length_range_min=screen_length_range_min)
-            BAU_condition &= Q(screen_length_range_max=screen_length_range_max)
+            BAU_condition &= Q(unsat_range_min=unsat_range_min)
+            BAU_condition &= Q(unsat_range_max=unsat_range_max)
         BAU_condition &= Q(sim_end_year=sim_end_year)
         BAU_instances = models.ModelRun.objects.filter(BAU_condition)
         for region in regions_data:
@@ -277,11 +364,13 @@ class RunResultSerializer(serializers.ModelSerializer):
                     reduction_end_year=2020,
                     status=models.ModelRun.READY,
                     water_content=water_content,
+                    porosity=porosity,
                     applied_simulation_filter=applied_simulation_filter,
                     depth_range_min=depth_range_min,
                     depth_range_max=depth_range_max,
-                    screen_length_range_min=screen_length_range_min,
-                    screen_length_range_max=screen_length_range_max,
+                    unsat_range_min=unsat_range_min,
+                    unsat_range_max=unsat_range_max,
+                    mantis_version=mantis_version,
                 )
             else:
                 BAU_model = models.ModelRun.objects.create(
@@ -300,7 +389,9 @@ class RunResultSerializer(serializers.ModelSerializer):
                     reduction_end_year=2020,
                     status=models.ModelRun.READY,
                     water_content=water_content,
+                    porosity=porosity,
                     applied_simulation_filter=applied_simulation_filter,
+                    mantis_version=mantis_version,
                 )
             for region in regions_data:
                 BAU_model.regions.add(models.Region.objects.get(id=region["id"]))
@@ -346,9 +437,18 @@ class RunResultSerializer(serializers.ModelSerializer):
         return model_run
 
     def update(self, instance, validated_data):
-        """
-        currently only allow 'public' to be updated.
-        """
-        instance.public = validated_data.get("public", instance.public)
-        instance.save()
-        return instance
+        """Update and return model."""
+        name = validated_data.pop('name', None)
+        description = validated_data.pop('description', None)
+
+        model_run = super().update(instance, validated_data)
+
+        if name:
+            model_run.name = name
+            model_run.save()
+
+        if description:
+            model_run.description = description
+            model_run.save()
+
+        return model_run

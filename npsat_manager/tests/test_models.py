@@ -9,9 +9,9 @@ Note:
 from django.test import TestCase
 from npsat_manager import models
 from django.db import transaction
-from django.contrib.auth.models import User
 from django.db import IntegrityError
 from npsat_manager.tests import utils
+from npsat_manager.models import CustomUser
 
 
 class ResourcesTestCase(TestCase):
@@ -150,7 +150,7 @@ class ModelRunTestCase(TestCase):
         utils.load_test_users()
         with transaction.atomic():
             # users
-            User.objects.create(username="user1", password="user1").save()
+            CustomUser.objects.create(username="user1", password="user1").save()
             # regions
             models.Region.objects.create(
                 name="Central Valley",
@@ -200,7 +200,7 @@ class ModelRunTestCase(TestCase):
             ).save()
             # default model run
             models.ModelRun.objects.create(
-                user=User.objects.get(username="user1"),
+                user=CustomUser.objects.get(username="user1"),
                 name="Default model",
                 flow_scenario=models.Scenario.objects.get(
                     scenario_type=models.Scenario.TYPE_FLOW
@@ -219,7 +219,7 @@ class ModelRunTestCase(TestCase):
     def test_ModelRun_create(self):
         """test creation/save and the generated input message"""
         model_run1 = models.ModelRun.objects.create(
-            user=User.objects.get(username="user1"),
+            user=CustomUser.objects.get(username="user1"),
             name="Model 1 by User 1 private",
             flow_scenario=models.Scenario.objects.get(
                 scenario_type=models.Scenario.TYPE_FLOW
@@ -235,8 +235,8 @@ class ModelRunTestCase(TestCase):
             # ),
             depth_range_max=350.22,
             depth_range_min=20.11,
-            screen_length_range_max=100.00,
-            screen_length_range_min=0.876,
+            unsat_range_max=100.00,
+            unsat_range_min=0.876,
             applied_simulation_filter=True
         )
         model_run1.regions.add(models.Region.objects.get(name="Central Valley"))
@@ -295,7 +295,7 @@ class ModelRunTestCase(TestCase):
             for i in range(5):
                 model_to_be_deleted = models.ModelRun.objects.create(
                     name="Model to be deleted {}".format(i),
-                    user=User.objects.get(username="user1"),
+                    user=CustomUser.objects.get(username="user1"),
                     flow_scenario=models.Scenario.objects.get(
                         scenario_type=models.Scenario.TYPE_FLOW
                     ),

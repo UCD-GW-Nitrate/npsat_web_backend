@@ -9,6 +9,7 @@ admin.site.register(models.Crop)
 admin.site.register(models.CropGroup)
 admin.site.register(models.MantisServer)
 admin.site.register(models.Scenario)
+admin.site.register(models.Well)
 admin.site.register(models.ResultPercentile)
 
 

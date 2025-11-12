@@ -1,6 +1,0 @@
-requests
-drf-yasg
-pyyaml
-uritemplate
-numba
-numpy
