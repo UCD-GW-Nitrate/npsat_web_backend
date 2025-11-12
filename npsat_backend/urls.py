@@ -49,6 +49,9 @@ router.register(r"well", views.WellViewSet, basename="Well")
 router.register(
     r"model_result", views.ResultPercentileViewSet, basename="ResultPercentile"
 )
+router.register(
+    r"dynamic_percentiles", views.DynamicPercentileViewSet, basename="DynamicPercentile"
+)
 router.register(r'well_explorer', views.WellExplorerViewset, basename='WellExplorer')
 
 urlpatterns = [

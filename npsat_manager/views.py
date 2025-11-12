@@ -25,6 +25,7 @@ from npsat_manager.support import (
 from django.core.mail import send_mail
 from django.conf import settings
 from random import randrange
+import numpy
 
 from django.http import HttpResponse
 from django.db import connections
@@ -688,15 +689,71 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             | Q(model__is_base=True)
         ).order_by("-id")
     
-    def list(self, response):
+    def list(self):
         percentileIds = self.request.query_params.getlist("percentileIds", [])
         serializer = None
+
         if len(percentileIds) > 0:
             query_set = models.ResultPercentile.objects.filter(id__in=percentileIds)
+            print(query_set)
             serializer = self.get_serializer(query_set, many=True)
         else:
             serializer = self.get_serializer(models.ResultPercentile.objects.all(), many=True)
         return Response(serializer.data)
+    
+    # since retrieve() is not defined, retrieve defaults behavior is (1) get_queryset and (2) filter it by id route param
+
+
+class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
+    @action(detail=False, methods=['post'])
+    def get_dynamic_percentiles(self, request):
+        model_id = request.data.get('model_id')
+        depth_range_min = request.data.get('depth_range_min')
+        depth_range_max = request.data.get('depth_range_max')
+
+        if model_id is None or depth_range_min is None or depth_range_max is None:
+            return Response({"error": "Missing params"}, status=400)
+          
+        query_set = models.RawSimulationRun.objects.filter(
+            Q(model_id=model_id)
+        )
+
+        raw_simulation_run = query_set.first()
+
+        if raw_simulation_run is None:
+            return Response({"error": "No data found"}, status=400)
+        
+        results_array = numpy.array(raw_simulation_run.values, dtype=float)
+        results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
+        
+        # get wells referenced by eid in the raw results that meet the depth criteria
+        well_eids = results_2d[:, 0].tolist()
+        wells = models.Well.objects.filter(
+            eid__in=well_eids,
+            depth__gte=depth_range_min,
+            depth__lte=depth_range_max
+        )
+
+        # save eids of filtered wells
+        filtered_eid_set = { w.eid for w in wells }
+
+        # create a mask of which rows of the results reference a well with an acceptable depth
+        mask = numpy.array([eid in filtered_eid_set for eid in well_eids])
+
+        filtered_results_2d = results_2d[mask, :]
+        filtered_results_2d = filtered_results_2d[:, 1:] # remove the well eids from the 2d results
+
+        # calculate percentiles and format a response
+        percentiles = numpy.nanpercentile(
+            filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+        )
+
+        percentile_map = {}
+        for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
+            current_percentiles = percentiles[index].tolist()
+            percentile_map[percentile] = current_percentiles
+
+        return Response(percentile_map)
 
 
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
