@@ -705,33 +705,6 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
-    def region_wells(self, valid_request):
-        flow_idx = valid_request.data.get('flow')
-        scen_idx = valid_request.data.get('scen')
-        wtype_idx = valid_request.data.get('wtype')
-        bmap_idx = valid_request.data.get('bmap')
-        idmap = valid_request.data.get('idmap')
-        
-        flow_arr=["c2vsim", "cvhm2"];
-        scen_arr=["padj","radj"];
-        wtype_arr=["vi","vd"];
-        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
-
-        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
-
-        query = f"""
-            SELECT Eid, UNSATcond, WT2T, SLmod FROM {table_name} WHERE {bmap_arr[bmap_idx]} = %s
-            """
-
-        with connections['mysql_db'].cursor() as cursor:
-            cursor.execute(
-                query,
-                [idmap]
-            )
-            columns = [col[0] for col in cursor.description]
-            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-            return results
-
     @action(detail=False, methods=['post'])
     def get_dynamic_percentiles(self, request):
         model_id = request.data.get('model_id')
@@ -740,19 +713,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
         if model_id is None or depth_range_min is None or depth_range_max is None:
             return Response({"error": "Missing params"}, status=400)
-
-        flow_idx = request.data.get('flow')
-        scen_idx = request.data.get('scen')
-        wtype_idx = request.data.get('wtype')
-        bmap_idx = request.data.get('bmap')
-        idmap = request.data.get('idmap')
-
-        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None:
-            return Response({"error": "Missing params"}, status=400)
-        
-        wells = self.region_wells(request)
-        mask = numpy.array([depth_range_min <= well["UNSATcond"] + well["WT2T"] + well["SLmod"] <= depth_range_max for well in wells])
-        
+          
         query_set = models.RawSimulationRun.objects.filter(
             Q(model_id=model_id)
         )
@@ -764,8 +725,25 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         
         results_array = numpy.array(raw_simulation_run.values, dtype=float)
         results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
-        filtered_results_2d = results_2d[mask, :]
+        
+        # get wells referenced by eid in the raw results that meet the depth criteria
+        well_eids = results_2d[:, 0].tolist()
+        wells = models.Well.objects.filter(
+            eid__in=well_eids,
+            depth__gte=depth_range_min,
+            depth__lte=depth_range_max
+        )
 
+        # save eids of filtered wells
+        filtered_eid_set = { w.eid for w in wells }
+
+        # create a mask of which rows of the results reference a well with an acceptable depth
+        mask = numpy.array([eid in filtered_eid_set for eid in well_eids])
+
+        filtered_results_2d = results_2d[mask, :]
+        filtered_results_2d = filtered_results_2d[:, 1:] # remove the well eids from the 2d results
+
+        # calculate percentiles and format a response
         percentiles = numpy.nanpercentile(
             filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
         )

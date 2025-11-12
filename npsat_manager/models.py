@@ -568,7 +568,7 @@ class MantisServer(models.Model):
         s.connect((self.host, self.port))
         # mantis_reader, mantis_writer = asyncio.open_connection(server.host, server.port)
         # log.debug("Connected successfully")
-        command_string = "modelArea CentralValley " + model_run.input_message
+        command_string = "modelArea CentralValley " + "getids 1 " + model_run.input_message
         log.info("Command String is: {}".format(command_string))
         s.send(command_string.encode("utf-8"))
         # s.flush()
@@ -636,7 +636,8 @@ def process_results(results, model_run):
         value for value in results_values if value not in (b"", b"\n")
     ]  # drop any extra empty values we got because they make the total number go off
     model_run.n_wells = int(results_values[1])
-    n_years = int(results_values[2])
+    num_columns = int(results_values[2])
+    n_years = num_columns - 1 # first column is well eid
     results_values = results_values[
         3:-1
     ]  # first value is status message, second value is number of wells, third is number of years, last is "EndOfMsg"
@@ -644,9 +645,10 @@ def process_results(results, model_run):
     log.info(len(results_values))
     log.info(n_years)
     log.info(model_run.n_wells)
+    
     if (
-        len(results_values) % n_years != 0
-        or (len(results_values) / model_run.n_wells) != n_years
+        len(results_values) % num_columns != 0
+        or (len(results_values) / model_run.n_wells) != num_columns
     ):
         error_message = "Got an incorrect number of results from model run. Cannot reliably process to percentiles. You may try again"
         model_run.status = ModelRun.ERROR
@@ -660,14 +662,15 @@ def process_results(results, model_run):
     # we're going to make a 2 dimensional numpy array where every row is a well and every column is a year
     # start by making it a numpy array and convert to float by default
     results_array = numpy.array(results_values, dtype=float)
-    results_2d = results_array.reshape(model_run.n_wells, n_years)
+    results_2d = results_array.reshape(model_run.n_wells, num_columns)
+    results_2d = results_2d[:, 1:] # remove the well eid from the 2d results
 
-    # first store the raw simulation run
+    # first, store the raw simulation run
     raw_data = json.dumps(
         results_array.tolist()
     )
     RawSimulationRun(
-        model=model_run, rows=model_run.n_wells, columns=n_years, values=raw_data, expiration=arrow.utcnow().shift(days=+1).datetime
+        model=model_run, rows=model_run.n_wells, columns=num_columns, values=raw_data, expiration=arrow.utcnow().shift(days=+1).datetime
     ).save()
 
     # get the percentiles - when a percentile would be between 2 values, get the nearest actual value in the dataset
