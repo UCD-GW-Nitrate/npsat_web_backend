@@ -52,6 +52,10 @@ router.register(r"scenario", views.ScenarioViewSet, basename="Scenario")
 router.register(
     r"model_result", views.ResultPercentileViewSet, basename="ResultPercentile"
 )
+router.register(
+    r"dynamic_percentiles", views.DynamicPercentileViewSet, basename="DynamicPercentile"
+)
+router.register(r'well_explorer', views.WellExplorerViewset, basename='WellExplorer')
 
 urlpatterns = [
     path("admin/", admin.site.urls),

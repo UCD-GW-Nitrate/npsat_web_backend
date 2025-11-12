@@ -441,7 +441,7 @@ class Modification(models.Model):
 
 class MantisServer(models.Model):
     """
-    We can configure a server pool by instantiating different versions of this model. On startup, a function willl
+    We can configure a server pool by instantiating different versions of this model. On startup, a function will
     trigger each instance to determine if it is online and available, at which point when we go to send out tasks,
     it will be available for use.
     """
@@ -530,6 +530,16 @@ class MantisServer(models.Model):
         log.info("Results saved")
 
 
+class RawSimulationRun(models.Model):
+    model = models.ForeignKey(
+        ModelRun, on_delete=models.CASCADE, related_name="raw_data"
+    )
+    rows = models.IntegerField(null=False)
+    columns = models.IntegerField(null=False)
+    values = SimpleJSONField()
+    expiration = models.DateField(null=False)
+
+
 def process_results(results, model_run):
     """
             Given the model results,
@@ -577,6 +587,15 @@ def process_results(results, model_run):
     # start by making it a numpy array and convert to float by default
     results_array = numpy.array(results_values, dtype=numpy.float)
     results_2d = results_array.reshape(model_run.n_wells, n_years)
+
+    # first store the raw simulation run
+    raw_data = json.dumps(
+        results_array.tolist()
+    )
+    RawSimulationRun(
+        model=model_run, rows=model_run.n_wells, columns=n_years, values=raw_data, expiration=arrow.utcnow().shift(days=+1).datetime
+    ).save()
+
     # get the percentiles - when a percentile would be between 2 values, get the nearest actual value in the dataset
     # instead of interpolating between them, mostly because numpy throws errors when we try that.
     # skip all nan in the mantis output

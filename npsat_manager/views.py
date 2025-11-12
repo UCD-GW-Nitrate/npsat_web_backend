@@ -21,6 +21,11 @@ from npsat_manager.support import (
     tokens,
 )  # token code makes sure that all users have tokens - needs to be imported somewhere
 
+from django.core.mail import send_mail
+from django.conf import settings
+from random import randrange
+import numpy
+
 from django.http import HttpResponse
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -482,13 +487,91 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             | Q(model__is_base=True)
         ).order_by("-id")
     
-    def list(self, response):
+    def list(self):
         percentileIds = self.request.query_params.getlist("percentileIds", [])
         serializer = None
+
         if len(percentileIds) > 0:
             query_set = models.ResultPercentile.objects.filter(id__in=percentileIds)
+            print(query_set)
             serializer = self.get_serializer(query_set, many=True)
         else:
             serializer = self.get_serializer(models.ResultPercentile.objects.all(), many=True)
         return Response(serializer.data)
+    
+    # since retrieve() is not defined, retrieve defaults behavior is (1) get_queryset and (2) filter it by id route param
+
+
+class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
+    def region_wells(self, valid_request):
+        flow_idx = valid_request.data.get('flow')
+        scen_idx = valid_request.data.get('scen')
+        wtype_idx = valid_request.data.get('wtype')
+        bmap_idx = valid_request.data.get('bmap')
+        idmap = valid_request.data.get('idmap')
+        
+        flow_arr=["c2vsim", "cvhm2"];
+        scen_arr=["padj","radj"];
+        wtype_arr=["vi","vd"];
+        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
+
+        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+
+        query = f"""
+            SELECT Eid, UNSATcond, WT2T, SLmod FROM {table_name} WHERE {bmap_arr[bmap_idx]} = %s
+            """
+
+        with connections['mysql_db'].cursor() as cursor:
+            cursor.execute(
+                query,
+                [idmap]
+            )
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return results
+
+    @action(detail=False, methods=['post'])
+    def get_dynamic_percentiles(self, request):
+        model_id = request.data.get('model_id')
+        depth_range_min = request.data.get('depth_range_min')
+        depth_range_max = request.data.get('depth_range_max')
+
+        if model_id is None or depth_range_min is None or depth_range_max is None:
+            return Response({"error": "Missing params"}, status=400)
+
+        flow_idx = request.data.get('flow')
+        scen_idx = request.data.get('scen')
+        wtype_idx = request.data.get('wtype')
+        bmap_idx = request.data.get('bmap')
+        idmap = request.data.get('idmap')
+
+        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        wells = self.region_wells(request)
+        mask = numpy.array([depth_range_min <= well["UNSATcond"] + well["WT2T"] + well["SLmod"] <= depth_range_max for well in wells])
+        
+        query_set = models.RawSimulationRun.objects.filter(
+            Q(model_id=model_id)
+        )
+
+        raw_simulation_run = query_set.first()
+
+        if raw_simulation_run is None:
+            return Response({"error": "No data found"}, status=400)
+        
+        results_array = numpy.array(raw_simulation_run.values, dtype=float)
+        results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
+        filtered_results_2d = results_2d[mask, :]
+
+        percentiles = numpy.nanpercentile(
+            filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+        )
+
+        percentile_map = {}
+        for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
+            current_percentiles = percentiles[index].tolist()
+            percentile_map[percentile] = current_percentiles
+
+        return Response(percentile_map)
 
