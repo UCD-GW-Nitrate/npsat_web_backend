@@ -31,6 +31,8 @@ from django.http import HttpResponse
 from django.db import connections
 from django.db.models import Q
 
+import arrow
+
 log = logging.getLogger("npsat.manager")
 
 class CreateUserView(generics.CreateAPIView):
@@ -723,6 +725,11 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         if raw_simulation_run is None:
             return Response({"error": "No data found"}, status=400)
         
+        expirationDateTime = raw_simulation_run.expiration
+        if expirationDateTime < arrow.utcnow().datetime.date():
+            raw_simulation_run.delete()
+            return Response({"error": "No data found"}, status=400)
+        
         results_array = numpy.array(raw_simulation_run.values, dtype=float)
         results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
         
@@ -736,6 +743,10 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
         # save eids of filtered wells
         filtered_eid_set = { w.eid for w in wells }
+
+        # save the number breakthrough curves filtered to be able to return
+        num_curves = len(filtered_eid_set),
+        total_curves = raw_simulation_run.rows
 
         # create a mask of which rows of the results reference a well with an acceptable depth
         mask = numpy.array([eid in filtered_eid_set for eid in well_eids])
@@ -753,7 +764,12 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             current_percentiles = percentiles[index].tolist()
             percentile_map[percentile] = current_percentiles
 
-        return Response(percentile_map)
+        return Response({
+            "expiration": expirationDateTime.isoformat(),
+            "data": percentile_map,
+            "num_curves": num_curves,
+            "total_curves": total_curves
+        })
 
 
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
