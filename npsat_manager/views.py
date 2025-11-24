@@ -771,7 +771,6 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             "total_curves": total_curves
         })
 
-
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'])
     def region_wells(self, request):  
