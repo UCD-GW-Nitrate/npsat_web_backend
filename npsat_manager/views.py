@@ -33,6 +33,8 @@ from django.db.models import Q
 
 import arrow
 
+from shapely.geometry import Point, Polygon
+
 log = logging.getLogger("npsat.manager")
 
 class CreateUserView(generics.CreateAPIView):
@@ -712,6 +714,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         model_id = request.data.get('model_id')
         depth_range_min = request.data.get('depth_range_min')
         depth_range_max = request.data.get('depth_range_max')
+        polygonCoords = request.data.get('polygonCoords')
 
         if model_id is None or depth_range_min is None or depth_range_max is None:
             return Response({"error": "Missing params"}, status=400)
@@ -740,6 +743,14 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             depth__gte=depth_range_min,
             depth__lte=depth_range_max
         )
+
+        if (polygonCoords and len(polygonCoords) > 0):
+            poly = Polygon([(lng, lat) for lat, lng in polygonCoords])
+
+            wells = [
+                w for w in wells
+                if poly.contains(Point(w.lon, w.lat))
+            ]
 
         # save eids of filtered wells
         filtered_eid_set = { w.eid for w in wells }
