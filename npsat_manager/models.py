@@ -415,7 +415,7 @@ class ModelRun(models.Model):
 
         # use a hash map to store all explicit modifications
         explicit_modifications = {}
-        all_other_crop_value = None
+        all_other_crop_value = 1 # default loading of all other crops to 100%
         for modification in modifications:
             # all other crops
             if modification.crop.crop_type == Crop.ALL_OTHER_CROPS:
