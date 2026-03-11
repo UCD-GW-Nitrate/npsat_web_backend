@@ -60,6 +60,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
 
 
+class UserPreferences(models.Model):
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.DO_NOTHING, related_name="user_preferences"
+    )
+
+    disclaimer_seen = models.BooleanField(default=False)
+    expl_wells_tour_complete = models.BooleanField(default=False)
+    feed_size = models.IntegerField(default=10)
+
+
 class PercentileAggregate(models.Aggregate):
     """
     I'm pretty sure we aren't using this and I'm just saving it in case we want to adapt it

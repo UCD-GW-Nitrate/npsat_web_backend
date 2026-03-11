@@ -46,6 +46,34 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserPreferencesSerializer(serializers.ModelSerializer):
+    """Serializer for the user object."""
+
+    class Meta:
+        model = models.UserPreferences
+        fields = ['disclaimer_seen', 'expl_wells_tour_complete', 'feed_size']
+
+    def update(self, instance, validated_data):
+        """Update and return user."""
+        disclaimer_seen = validated_data.pop('disclaimer_seen', None)
+        expl_wells_tour_complete = validated_data.pop('expl_wells_tour_complete', None)
+        feed_size = validated_data.pop('feed_size', None)
+
+        if disclaimer_seen:
+            instance.disclaimer_seen = True
+            instance.save()
+
+        if expl_wells_tour_complete:
+            instance.expl_wells_tour_complete = True
+            instance.save()
+        
+        if feed_size:
+            instance.feed_size = feed_size
+            instance.save()
+
+        return instance
+
+
 class AuthTokenSerializer(serializers.Serializer):
     """Serializer for the user auth token."""
     email = serializers.EmailField()

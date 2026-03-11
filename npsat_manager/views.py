@@ -160,6 +160,18 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+class ManageUserPreferenceView(generics.RetrieveUpdateAPIView):
+    """Manage the authenticated user."""
+    serializer_class = serializers.UserPreferencesSerializer
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Retrieve and return the authenticated user."""
+        user_preferences, _ = models.UserPreferences.objects.get_or_create(user=self.request.user)
+        return user_preferences
+
+
 class ReadOnly(BasePermission):
     def has_permission(self, request, view):
         return request.method in SAFE_METHODS

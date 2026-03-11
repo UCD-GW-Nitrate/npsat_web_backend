@@ -450,10 +450,7 @@ def enable_scenario_dev_data():
             crop_code_field = None
             if category == "Load Scenario":
                 scenario_type = models.Scenario.TYPE_LOAD
-                if scenario["Code name"] == "GNLM":
-                    crop_code_field = models.Scenario.GNLM_CROP
-                else:
-                    crop_code_field = models.Scenario.SWAT_CROP
+                crop_code_field = models.Scenario.GNLM_CROP
             elif category == "Flow Scenario":
                 scenario_type = models.Scenario.TYPE_FLOW
             elif category == "Well Type Scenario":
