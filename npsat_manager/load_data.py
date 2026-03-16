@@ -17,10 +17,11 @@ def load_all(mantis_port_number=5941):
     load_system_admin_bot()
 
 def load_all_data():
-    load_crops()
-    load_regions()
+    # load_crops() -- No longer using this one
+    load_only_gnlm_crops()
+    # load_regions()
     load_scenarios()
-    load_wells()
+    # load_wells()
 
 
 def load_system_admin_bot():
@@ -127,7 +128,7 @@ def load_crops(
             The crop loading here is very basic - it does add some relationships, but they're not all correct yet.
             It's good enough for now though. I'm only loading the SWAT->GNLM data and not the other way around, technically,
             except I load it as both (that is, the GNLM crops have the SWAT relationships still, but they might not be
-             right for the long run). It also doesn't load groups yet. No crop has both a GNLM and a SWAT code right now
+            right for the long run). It also doesn't load groups yet. No crop has both a GNLM and a SWAT code right now
              - they all have only one or the other. I might keep things that way
     :return:
     """
@@ -157,9 +158,9 @@ def load_crops(
             try:
                 swat_crop = models.Crop.objects.get(
                     swat_code=record[swat_id_field], 
-                    name=record[swat_name_field],
                     crop_type=models.Crop.SWAT_CROP,
                 )
+                swat_crop.name=record[swat_name_field]
                 swat_crop.active_in_mantis = True
                 swat_crop.save()
             except models.Crop.DoesNotExist:
@@ -173,9 +174,9 @@ def load_crops(
             try:
                 gnlm_crop = models.Crop.objects.get(
                     caml_code=record[gnlm_id_field],
-                    name=record[gnlm_name_field],
                     crop_type=models.Crop.GNLM_CROP,
                 )
+                gnlm_crop.name=record[gnlm_name_field]
                 gnlm_crop.active_in_mantis = True
                 gnlm_crop.save()
             except models.Crop.DoesNotExist:
@@ -191,6 +192,56 @@ def load_crops(
             gnlm_crop.similar_crops.add(swat_crop)
             swat_crop.save()
             gnlm_crop.save()
+
+
+def load_only_gnlm_crops(
+    crop_csv=os.path.join(data_folder, "crops", "GNLM_LU_3_26.csv"),
+    gnlm_name_field="LU_Name",
+    gnlm_id_field="DWR_CAML_Code",
+):
+    """
+            The crop loading here is reflective of changes in Mantis, where only GNLM Load Scenarios are available to the user.
+            Newly added GNLM crop which were't existing from previous load_crops runs will not have bidirectional swat 
+            relationship, since they aren't defined by the target csv
+    :return:
+    """
+
+    # add ALL Other Crops first
+    if models.Crop.objects.filter(name="All Other Crops").count() == 0:
+        models.Crop.objects.create(
+            name="All Other Crops", crop_type=models.Crop.ALL_OTHER_CROPS
+        )
+    
+    for crop in models.Crop.objects.all():
+        crop.active_in_mantis = False
+        crop.save()
+
+    try:
+        all_other_crops = models.Crop.objects.get(name="All Other Crops")
+        all_other_crops.active_in_mantis = True
+        all_other_crops.save()
+    except models.Crop.DoesNotExist:
+        pass
+
+    with open(crop_csv, "r") as csv_data:
+        crop_list = csv.DictReader(csv_data)
+
+        for record in crop_list:
+            try:
+                gnlm_crop = models.Crop.objects.get(
+                    caml_code=record[gnlm_id_field],
+                    crop_type=models.Crop.GNLM_CROP,
+                )
+                gnlm_crop.name=record[gnlm_name_field]
+                gnlm_crop.active_in_mantis = True
+                gnlm_crop.save()
+            except models.Crop.DoesNotExist:
+                gnlm_crop = models.Crop(
+                    name=record[gnlm_name_field],
+                    caml_code=record[gnlm_id_field],
+                    crop_type=models.Crop.GNLM_CROP,
+                )
+                gnlm_crop.save()
 
 
 def load_counties():
@@ -434,12 +485,12 @@ def enable_scenario_dev_data():
         for scenario in scenario_list:
             try:
                 existing_scenario = models.Scenario.objects.get(
-                    name=scenario["User friendly name"],
                     mantis_id=scenario["Code name"],
-                    description=scenario["Short description"],
-                    long_description=scenario["Long description"],
-                    external_url=scenario["url"],
                 )
+                existing_scenario.name = scenario["User friendly name"]
+                existing_scenario.description = scenario["Short description"]
+                existing_scenario.long_description = scenario["Long description"]
+                existing_scenario.external_url = scenario["url"]
                 existing_scenario.active_in_mantis = True
                 existing_scenario.save()
                 continue

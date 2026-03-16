@@ -1,7 +1,7 @@
 Category,Code name,User friendly name,Short description,Long description,url
-Load Scenario,GNLM_Full,GNLM Full,"Groundwater Nitrogen Loading Model (Harter et al., 2017)",,http://ucd-cws.github.io/nitrates/
-Load Scenario,GNLM_Half,GNLM Half,"Groundwater Nitrogen Loading Model (Harter et al., 2017)",,http://ucd-cws.github.io/nitrates/
-Load Scenario,GNLM_No,GNLM No,"Groundwater Nitrogen Loading Model (Harter et al., 2017)",,http://ucd-cws.github.io/nitrates/
+Load Scenario,GNLM_Full,GNLM Full Dairy,"Groundwater Nitrogen Loading Model (Harter et al., 2017)",,http://ucd-cws.github.io/nitrates/
+Load Scenario,GNLM_Half,GNLM Half Dairy,"Groundwater Nitrogen Loading Model (Harter et al., 2017)",,http://ucd-cws.github.io/nitrates/
+Load Scenario,GNLM_No,GNLM No Dairy,"Groundwater Nitrogen Loading Model (Harter et al., 2017)",,http://ucd-cws.github.io/nitrates/
 Unsaturated Scenario,CVHM2_MAR24,CVHM2 Typical vadose zone thickness,Based on CVHM average water level data conditioned on average water level data from 2011 - 2023,,https://github.com/UCD-GW-Nitrate/cv-unsat/blob/main/ConditionCVHM_WaterLevel.ipynb
 Unsaturated Scenario,C2VSIM_MAR24,C2VSIM Typical vadose zone thickness,Based on C2VSIM average water level data conditioned on average water level data from 2011 - 2023,,https://github.com/UCD-GW-Nitrate/cv-unsat/blob/main/ConditionC2VSim_WaterLevel.ipynb
 Flow Scenario,CVHM2_MAR24_Padj,CVHM2 with Pumping adjusted to match the Recharge,Simulation based on CVHM2 average flow conditions for the period 2009 - 2019,,
