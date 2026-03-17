@@ -35,6 +35,8 @@ import arrow
 
 from shapely.geometry import Point, Polygon
 
+from joblib import Parallel, delayed
+
 log = logging.getLogger("npsat.manager")
 
 class CreateUserView(generics.CreateAPIView):
@@ -721,6 +723,40 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
+    def fetch_raw_data(self, raw_simulation_run, depth_range_min, depth_range_max, polygonCoords):
+        results_array = numpy.array(raw_simulation_run.values, dtype=float)
+        results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
+        
+        # get wells referenced by eid in the raw results that meet the depth criteria
+        well_eids = results_2d[:, 0].tolist()
+        wells = models.Well.objects.filter(
+            eid__in=well_eids,
+            depth__gte=depth_range_min,
+            depth__lte=depth_range_max
+        )
+
+        if (polygonCoords and len(polygonCoords) > 0):
+            poly = Polygon([(lng, lat) for lat, lng in polygonCoords])
+
+            wells = [
+                w for w in wells
+                if poly.contains(Point(w.lon, w.lat))
+            ]
+
+        # save eids of filtered wells
+        filtered_eid_set = { w.eid for w in wells }
+
+        # save the number breakthrough curves filtered to be able to return
+        num_curves = len(filtered_eid_set)
+        total_curves = raw_simulation_run.rows
+
+        # create a mask of which rows of the results reference a well with an acceptable depth
+        mask = numpy.array([eid in filtered_eid_set for eid in well_eids])
+
+        filtered_results_2d = results_2d[mask, :]
+        filtered_results_2d = filtered_results_2d[:, 1:] # remove the well eids from the 2d results
+        return (filtered_results_2d, num_curves, total_curves)
+
     @action(detail=False, methods=['post'])
     def get_dynamic_percentiles(self, request):
         model_id = request.data.get('model_id')
@@ -745,37 +781,12 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             raw_simulation_run.delete()
             return Response({"error": "No data found"}, status=400)
         
-        results_array = numpy.array(raw_simulation_run.values, dtype=float)
-        results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
-        
-        # get wells referenced by eid in the raw results that meet the depth criteria
-        well_eids = results_2d[:, 0].tolist()
-        wells = models.Well.objects.filter(
-            eid__in=well_eids,
-            depth__gte=depth_range_min,
-            depth__lte=depth_range_max
+        (filtered_results_2d, num_curves, total_curves) = self.fetch_raw_data(
+            raw_simulation_run,
+            depth_range_min,
+            depth_range_max,
+            polygonCoords
         )
-
-        if (polygonCoords and len(polygonCoords) > 0):
-            poly = Polygon([(lng, lat) for lat, lng in polygonCoords])
-
-            wells = [
-                w for w in wells
-                if poly.contains(Point(w.lon, w.lat))
-            ]
-
-        # save eids of filtered wells
-        filtered_eid_set = { w.eid for w in wells }
-
-        # save the number breakthrough curves filtered to be able to return
-        num_curves = len(filtered_eid_set),
-        total_curves = raw_simulation_run.rows
-
-        # create a mask of which rows of the results reference a well with an acceptable depth
-        mask = numpy.array([eid in filtered_eid_set for eid in well_eids])
-
-        filtered_results_2d = results_2d[mask, :]
-        filtered_results_2d = filtered_results_2d[:, 1:] # remove the well eids from the 2d results
 
         # calculate percentiles and format a response
         percentiles = numpy.nanpercentile(
@@ -792,6 +803,60 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             "data": percentile_map,
             "num_curves": num_curves,
             "total_curves": total_curves
+        })
+
+    @action(detail=False, methods=['post'])
+    def get_confidence_interval(self, request):
+        model_id = request.data.get('model_id')
+        depth_range_min = request.data.get('depth_range_min')
+        depth_range_max = request.data.get('depth_range_max')
+        polygonCoords = request.data.get('polygonCoords')
+        percentile = request.data.get('percentile')
+
+        if model_id is None or depth_range_min is None or depth_range_max is None or percentile is None:
+            return Response({"error": "Missing params"}, status=400)
+          
+        query_set = models.RawSimulationRun.objects.filter(
+            Q(model_id=model_id)
+        )
+
+        raw_simulation_run = query_set.first()
+
+        if raw_simulation_run is None:
+            return Response({"error": "No data found"}, status=400)
+        
+        expirationDateTime = raw_simulation_run.expiration
+        if expirationDateTime < arrow.utcnow().datetime.date():
+            raw_simulation_run.delete()
+            return Response({"error": "No data found"}, status=400)
+        
+        (filtered_results_2d, num_curves, _) = self.fetch_raw_data(
+            raw_simulation_run,
+            depth_range_min,
+            depth_range_max,
+            polygonCoords
+        )
+
+        nResamples = 100
+        
+        def one_bootstrap(seed):
+            numpy.random.seed(seed)
+            # resample curves with replacement
+            sample_idx = numpy.random.choice(num_curves, size=num_curves, replace=True)
+            return numpy.nanpercentile(filtered_results_2d[sample_idx, :], percentile, axis=0)
+
+        # parallel execution
+        bootstrap_percentiles = numpy.array(
+            Parallel(n_jobs=-1)(delayed(one_bootstrap)(s) for s in range(nResamples))
+        )
+
+        # compute confidence interval
+        lower = numpy.nanpercentile(bootstrap_percentiles, 2.5, axis=0)
+        upper = numpy.nanpercentile(bootstrap_percentiles, 97.5, axis=0)
+
+        return Response({
+            "lower_curve": lower.tolist(),
+            "upper_curve": upper.tolist(),
         })
 
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
