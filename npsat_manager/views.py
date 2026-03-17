@@ -150,6 +150,44 @@ class CustomAuthToken(ObtainAuthToken):
                 "email": user.email,
             }
         )
+
+class SendUserFeedback(generics.UpdateAPIView):
+    """Forward feedback from user to admins via email."""
+    authentication_classes = [authentication.TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        admins = models.CustomUser.objects.filter(is_staff=True)
+        
+        feedback_type = request.data.get('feedback_type')
+        message = request.data.get('message')
+        email = request.data.get('email')
+        name = request.data.get('name')
+
+        if message is None:
+            return Response({"error": "Missing params"}, status=400)
+        
+        if feedback_type is None:
+            feedback_type = "Unspecified"
+        
+        if email is None:
+            email = ""
+        
+        if name is None:
+            name = ""
+
+        for admin in admins:
+            response = send_mail(
+                "User shared their feedback - " + feedback_type,
+                (
+                    "Feedback Type: " + feedback_type + "\n\nMessage:\n" + message
+                    + "\n\nUser Info:\n" + "Name: " + name + "\nEmail: " + email
+                ),
+                settings.EMAIL_HOST_USER,
+                [admin.email],
+                fail_silently=False,
+            )
+        return Response({"response": response})
     
 class ManageUserView(generics.RetrieveUpdateAPIView):
     """Manage the authenticated user."""
