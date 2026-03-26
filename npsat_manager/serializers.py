@@ -429,6 +429,12 @@ class RunResultSerializer(serializers.ModelSerializer):
                 crop=models.Crop.objects.get(crop_type=models.Crop.ALL_OTHER_CROPS),
             )
             BAU_model.save()
+        
+        # if BAU already exists, still rerun in Mantis so the rawSimulationRun can be fetched
+        if BAU_instances.count() != 0:
+            BAU_model = BAU_instances.first()
+            BAU_model.status = models.ModelRun.READY
+            BAU_model.save()
 
         model_run = models.ModelRun.objects.create(
             **validated_data,

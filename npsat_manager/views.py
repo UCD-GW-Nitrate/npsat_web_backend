@@ -801,44 +801,59 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         depth_range_min = request.data.get('depth_range_min')
         depth_range_max = request.data.get('depth_range_max')
         polygonCoords = request.data.get('polygonCoords')
+        base_model_id = request.data.get('base_model_id')
 
         if model_id is None or depth_range_min is None or depth_range_max is None:
             return Response({"error": "Missing params"}, status=400)
-          
-        query_set = models.RawSimulationRun.objects.filter(
-            Q(model_id=model_id)
-        )
 
-        raw_simulation_run = query_set.first()
+        def get_percentile_map(modelId):  
+            query_set = models.RawSimulationRun.objects.filter(
+                Q(model_id=modelId)
+            )
 
-        if raw_simulation_run is None:
-            return Response({"error": "No data found"}, status=400)
+            raw_simulation_run = query_set.first()
+
+            if raw_simulation_run is None:
+                return (None, None, None, None)
+            
+            expirationDateTime = raw_simulation_run.expiration
+            if expirationDateTime < arrow.utcnow().datetime.date():
+                raw_simulation_run.delete()
+                return (None, None, None, None)
+            
+            (filtered_results_2d, num_curves, total_curves) = self.fetch_raw_data(
+                raw_simulation_run,
+                depth_range_min,
+                depth_range_max,
+                polygonCoords
+            )
+
+            # calculate percentiles and format a response
+            percentiles = numpy.nanpercentile(
+                filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+            )
+
+            percentile_map = {}
+            for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
+                current_percentiles = percentiles[index].tolist()
+                percentile_map[percentile] = current_percentiles
+            
+            return (percentile_map, expirationDateTime, num_curves, total_curves)
         
-        expirationDateTime = raw_simulation_run.expiration
-        if expirationDateTime < arrow.utcnow().datetime.date():
-            raw_simulation_run.delete()
-            return Response({"error": "No data found"}, status=400)
+        (custom_percentile_map, expirationDateTime, num_curves, total_curves) = get_percentile_map(model_id)
         
-        (filtered_results_2d, num_curves, total_curves) = self.fetch_raw_data(
-            raw_simulation_run,
-            depth_range_min,
-            depth_range_max,
-            polygonCoords
-        )
+        if base_model_id is not None:
+            (base_percentile_map, _, _, _) = get_percentile_map(base_model_id)
+        else:
+            base_percentile_map = None
 
-        # calculate percentiles and format a response
-        percentiles = numpy.nanpercentile(
-            filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
-        )
-
-        percentile_map = {}
-        for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
-            current_percentiles = percentiles[index].tolist()
-            percentile_map[percentile] = current_percentiles
+        if (custom_percentile_map is None):
+            return Response({"error": "No data found"}, status=400)
 
         return Response({
             "expiration": expirationDateTime.isoformat(),
-            "data": percentile_map,
+            "data": custom_percentile_map,
+            "base_data": base_percentile_map,
             "num_curves": num_curves,
             "total_curves": total_curves
         })
