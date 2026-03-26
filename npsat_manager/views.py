@@ -864,9 +864,9 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         depth_range_min = request.data.get('depth_range_min')
         depth_range_max = request.data.get('depth_range_max')
         polygonCoords = request.data.get('polygonCoords')
-        percentile = request.data.get('percentile')
+        percentiles = request.data.get('percentiles')
 
-        if model_id is None or depth_range_min is None or depth_range_max is None or percentile is None:
+        if model_id is None or depth_range_min is None or depth_range_max is None or percentiles is None:
             return Response({"error": "Missing params"}, status=400)
           
         query_set = models.RawSimulationRun.objects.filter(
@@ -892,24 +892,30 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
         nResamples = 100
         
-        def one_bootstrap(seed):
+        def one_bootstrap(seed, percentile):
             numpy.random.seed(seed)
             # resample curves with replacement
             sample_idx = numpy.random.choice(num_curves, size=num_curves, replace=True)
             return numpy.nanpercentile(filtered_results_2d[sample_idx, :], percentile, axis=0)
 
-        # parallel execution
-        bootstrap_percentiles = numpy.array(
-            Parallel(n_jobs=-1)(delayed(one_bootstrap)(s) for s in range(nResamples))
-        )
+        percentile_map = {}
+        for percentile in percentiles:
+            # parallel execution
+            bootstrap_percentiles = numpy.array(
+                Parallel(n_jobs=-1)(delayed(one_bootstrap)(s, percentile) for s in range(nResamples))
+            )
 
-        # compute confidence interval
-        lower = numpy.nanpercentile(bootstrap_percentiles, 2.5, axis=0)
-        upper = numpy.nanpercentile(bootstrap_percentiles, 97.5, axis=0)
+            # compute confidence interval
+            lower = numpy.nanpercentile(bootstrap_percentiles, 2.5, axis=0)
+            upper = numpy.nanpercentile(bootstrap_percentiles, 97.5, axis=0)
+            
+            percentile_map[percentile] = {
+                "lower": lower.tolist(),
+                "upper": upper.tolist(),
+            }
 
         return Response({
-            "lower_curve": lower.tolist(),
-            "upper_curve": upper.tolist(),
+            "data": percentile_map,
         })
 
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
