@@ -44,7 +44,7 @@ Onions and garlic,2010,Vegetables and Berries
 Peas,2011,Vegetables and Berries
 Sweet Potatoes,2013,Vegetables and Berries
 Spinach,2014,Vegetables and Berries
-Tomatoes (processing),2015,Vegetables and Berries
+Tomatoes,2015,Vegetables and Berries
 Bush berries,2019,Vegetables and Berries
 Strawberries,2020,Vegetables and Berries
 Peppers,2021,Vegetables and Berries
@@ -53,3 +53,9 @@ Cabbage,2023,Vegetables and Berries
 Cauliflower,2024,Vegetables and Berries
 Brussels Sprouts,2025,Vegetables and Berries
 "Vineyards (includes table grapes, wine grapes, and raisins)",2200,Vineyards
+Urban areas,10001,Urban (DirAppCode 1)
+Dairy lagoons,10002,Lagoons (DirAppCode 2)
+Dairy corrals,10003,Corrals (DirAppCode 3)
+Golf courses,10005,Golf Courses (DirAppCode 5)
+FP percolation basins,16500,FP Percolation Basins (DirAppCode 65xx)
+WWTP percolation basins,16000,WWTP Percolation Basins (DirAppCode 6xxx)
