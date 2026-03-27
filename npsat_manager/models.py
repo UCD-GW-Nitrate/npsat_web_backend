@@ -519,6 +519,15 @@ class Modification(models.Model):
     )
 
 
+class ModelInQueue(models.Model):
+    queue_position = models.IntegerField(null=True, blank=True)
+    model = models.ForeignKey(
+        ModelRun,
+        on_delete=models.CASCADE,
+        related_name="queue_entry",
+    )
+
+
 class MantisServer(models.Model):
     """
     We can configure a server pool by instantiating different versions of this model. On startup, a function will
@@ -607,6 +616,11 @@ class MantisServer(models.Model):
             model_run.status = ModelRun.COMPLETED
             model_run.date_completed = arrow.utcnow().datetime
             model_run.save()
+        
+        # Don't forget to remove model from process_runs queue
+        model_in_queue = models.Model.objects.get(model=model_run)
+        model_in_queue.delete()
+
         log.info("Results saved")
 
 

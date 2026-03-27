@@ -340,8 +340,14 @@ class GetModelStatus(APIView):
         for model_id in model_ids:
             try:
                 model = models.ModelRun.objects.get(id=model_id)
+                
+                model_in_queue = models.ModelInQueue.objects.get(model=model)
+                queue_position = None
+                if model_in_queue is not None:
+                    queue_position = model_in_queue.queue_position
+                
                 results.append(
-                    {"name": model.name, "id": int(model_id), "status": model.status}
+                    {"name": model.name, "id": int(model_id), "status": model.status, "queue_position": queue_position}
                     if model.is_base or model.public or model.user == self.request.user
                     else {
                         "name": model.name,

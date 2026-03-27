@@ -55,8 +55,18 @@ class Command(BaseCommand):
                     time.sleep(2)
                     continue
 
+                queue_position = 0
                 for run in self._waiting_runs:
-                    self.mantis_server.send_command(model_run=run)
+                    model_in_queue = models.Model.objects.get(model=run)
+
+                    if model_in_queue is None:
+                        continue
+                    model_in_queue.queue_position = queue_position
+                    model_in_queue.save()
+                    queue_position = queue_position + 1
+
+                run = self._waiting_runs.first()
+                self.mantis_server.send_command(model_run=run)
             except:
                 log.error("Encountered problem running model run - recovering")
                 log.error(traceback.format_exc())

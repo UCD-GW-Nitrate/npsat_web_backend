@@ -1,10 +1,10 @@
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import PermissionDenied
 
 from rest_framework import serializers
 
 from npsat_manager import models
 from npsat_backend import local_settings
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.contrib.auth import (
     get_user_model,
     authenticate,
@@ -463,6 +463,15 @@ class RunResultSerializer(serializers.ModelSerializer):
 
         for region in regions_data:
             model_run.regions.add(models.Region.objects.get(id=region["id"]))
+ 
+        # add model to processing queue
+        queue_size = models.ModelInQueue.objects.aggregate(
+            Max('queue_position')
+        )['queue_position__max'] or 0
+        models.ModelInQueue.objects.create(
+            model = model_run,
+            queue_position = queue_size + 1,
+        )
 
         # model is ready to run
         model_run.status = models.ModelRun.READY
