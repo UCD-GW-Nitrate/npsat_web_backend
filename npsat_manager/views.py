@@ -340,8 +340,14 @@ class GetModelStatus(APIView):
         for model_id in model_ids:
             try:
                 model = models.ModelRun.objects.get(id=model_id)
+                
+                model_in_queue = models.ModelInQueue.objects.filter(model=model).first()
+                queue_position = None
+                if model_in_queue is not None:
+                    queue_position = model_in_queue.queue_position
+                
                 results.append(
-                    {"name": model.name, "id": int(model_id), "status": model.status}
+                    {"name": model.name, "id": int(model_id), "status": model.status, "queue_position": queue_position}
                     if model.is_base or model.public or model.user == self.request.user
                     else {
                         "name": model.name,
@@ -801,44 +807,59 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         depth_range_min = request.data.get('depth_range_min')
         depth_range_max = request.data.get('depth_range_max')
         polygonCoords = request.data.get('polygonCoords')
+        base_model_id = request.data.get('base_model_id')
 
         if model_id is None or depth_range_min is None or depth_range_max is None:
             return Response({"error": "Missing params"}, status=400)
-          
-        query_set = models.RawSimulationRun.objects.filter(
-            Q(model_id=model_id)
-        )
 
-        raw_simulation_run = query_set.first()
+        def get_percentile_map(modelId):  
+            query_set = models.RawSimulationRun.objects.filter(
+                Q(model_id=modelId)
+            )
 
-        if raw_simulation_run is None:
-            return Response({"error": "No data found"}, status=400)
+            raw_simulation_run = query_set.first()
+
+            if raw_simulation_run is None:
+                return (None, None, None, None)
+            
+            expirationDateTime = raw_simulation_run.expiration
+            if expirationDateTime < arrow.utcnow().datetime.date():
+                raw_simulation_run.delete()
+                return (None, None, None, None)
+            
+            (filtered_results_2d, num_curves, total_curves) = self.fetch_raw_data(
+                raw_simulation_run,
+                depth_range_min,
+                depth_range_max,
+                polygonCoords
+            )
+
+            # calculate percentiles and format a response
+            percentiles = numpy.nanpercentile(
+                filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+            )
+
+            percentile_map = {}
+            for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
+                current_percentiles = percentiles[index].tolist()
+                percentile_map[percentile] = current_percentiles
+            
+            return (percentile_map, expirationDateTime, num_curves, total_curves)
         
-        expirationDateTime = raw_simulation_run.expiration
-        if expirationDateTime < arrow.utcnow().datetime.date():
-            raw_simulation_run.delete()
-            return Response({"error": "No data found"}, status=400)
+        (custom_percentile_map, expirationDateTime, num_curves, total_curves) = get_percentile_map(model_id)
         
-        (filtered_results_2d, num_curves, total_curves) = self.fetch_raw_data(
-            raw_simulation_run,
-            depth_range_min,
-            depth_range_max,
-            polygonCoords
-        )
+        if base_model_id is not None:
+            (base_percentile_map, _, _, _) = get_percentile_map(base_model_id)
+        else:
+            base_percentile_map = None
 
-        # calculate percentiles and format a response
-        percentiles = numpy.nanpercentile(
-            filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
-        )
-
-        percentile_map = {}
-        for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
-            current_percentiles = percentiles[index].tolist()
-            percentile_map[percentile] = current_percentiles
+        if (custom_percentile_map is None):
+            return Response({"error": "No data found"}, status=400)
 
         return Response({
             "expiration": expirationDateTime.isoformat(),
-            "data": percentile_map,
+            "data": custom_percentile_map,
+            "base_data": base_percentile_map,
             "num_curves": num_curves,
             "total_curves": total_curves
         })
@@ -849,52 +870,73 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         depth_range_min = request.data.get('depth_range_min')
         depth_range_max = request.data.get('depth_range_max')
         polygonCoords = request.data.get('polygonCoords')
-        percentile = request.data.get('percentile')
+        percentiles = request.data.get('percentiles')
+        base_model_id = request.data.get('base_model_id')
 
-        if model_id is None or depth_range_min is None or depth_range_max is None or percentile is None:
+        if model_id is None or depth_range_min is None or depth_range_max is None or percentiles is None:
             return Response({"error": "Missing params"}, status=400)
-          
-        query_set = models.RawSimulationRun.objects.filter(
-            Q(model_id=model_id)
-        )
 
-        raw_simulation_run = query_set.first()
+        def get_percentile_map(modelId):
+            query_set = models.RawSimulationRun.objects.filter(
+                Q(model_id=modelId)
+            )
 
-        if raw_simulation_run is None:
+            raw_simulation_run = query_set.first()
+
+            if raw_simulation_run is None:
+                return None
+            
+            expirationDateTime = raw_simulation_run.expiration
+            if expirationDateTime < arrow.utcnow().datetime.date():
+                raw_simulation_run.delete()
+                return None
+            
+            (filtered_results_2d, num_curves, _) = self.fetch_raw_data(
+                raw_simulation_run,
+                depth_range_min,
+                depth_range_max,
+                polygonCoords
+            )
+
+            def one_bootstrap(seed, percentile):
+                numpy.random.seed(seed)
+                # resample curves with replacement
+                sample_idx = numpy.random.choice(num_curves, size=num_curves, replace=True)
+                return numpy.nanpercentile(filtered_results_2d[sample_idx, :], percentile, axis=0)
+
+            nResamples = 100
+
+            percentile_map = {}
+            for percentile in percentiles:
+                # parallel execution
+                bootstrap_percentiles = numpy.array(
+                    Parallel(n_jobs=-1)(delayed(one_bootstrap)(s, percentile) for s in range(nResamples))
+                )
+
+                # compute confidence interval
+                lower = numpy.nanpercentile(bootstrap_percentiles, 2.5, axis=0)
+                upper = numpy.nanpercentile(bootstrap_percentiles, 97.5, axis=0)
+                
+                percentile_map[percentile] = {
+                    "lower": lower.tolist(),
+                    "upper": upper.tolist(),
+                }
+
+            return percentile_map
+        
+        custom_percentile_map = get_percentile_map(model_id)
+        
+        if base_model_id is not None:
+            base_percentile_map = get_percentile_map(base_model_id)
+        else:
+            base_percentile_map = None
+
+        if (custom_percentile_map is None):
             return Response({"error": "No data found"}, status=400)
-        
-        expirationDateTime = raw_simulation_run.expiration
-        if expirationDateTime < arrow.utcnow().datetime.date():
-            raw_simulation_run.delete()
-            return Response({"error": "No data found"}, status=400)
-        
-        (filtered_results_2d, num_curves, _) = self.fetch_raw_data(
-            raw_simulation_run,
-            depth_range_min,
-            depth_range_max,
-            polygonCoords
-        )
-
-        nResamples = 100
-        
-        def one_bootstrap(seed):
-            numpy.random.seed(seed)
-            # resample curves with replacement
-            sample_idx = numpy.random.choice(num_curves, size=num_curves, replace=True)
-            return numpy.nanpercentile(filtered_results_2d[sample_idx, :], percentile, axis=0)
-
-        # parallel execution
-        bootstrap_percentiles = numpy.array(
-            Parallel(n_jobs=-1)(delayed(one_bootstrap)(s) for s in range(nResamples))
-        )
-
-        # compute confidence interval
-        lower = numpy.nanpercentile(bootstrap_percentiles, 2.5, axis=0)
-        upper = numpy.nanpercentile(bootstrap_percentiles, 97.5, axis=0)
 
         return Response({
-            "lower_curve": lower.tolist(),
-            "upper_curve": upper.tolist(),
+            "data": custom_percentile_map,
+            "base_data": base_percentile_map,
         })
 
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
