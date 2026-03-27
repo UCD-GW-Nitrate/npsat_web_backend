@@ -922,7 +922,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
                     "upper": upper.tolist(),
                 }
 
-                return percentile_map
+            return percentile_map
         
         custom_percentile_map = get_percentile_map(model_id)
         
