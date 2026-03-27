@@ -618,8 +618,9 @@ class MantisServer(models.Model):
             model_run.save()
         
         # Don't forget to remove model from process_runs queue
-        model_in_queue = models.Model.objects.get(model=model_run)
-        model_in_queue.delete()
+        model_in_queue = ModelInQueue.objects.filter(model=model_run).first()
+        if model_in_queue:
+            model_in_queue.delete()
 
         log.info("Results saved")
 

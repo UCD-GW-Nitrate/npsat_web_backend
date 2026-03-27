@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
                 queue_position = 0
                 for run in self._waiting_runs:
-                    model_in_queue = models.Model.objects.get(model=run)
+                    model_in_queue = models.ModelInQueue.objects.filter(model=run).first()
 
                     if model_in_queue is None:
                         continue

@@ -341,7 +341,7 @@ class GetModelStatus(APIView):
             try:
                 model = models.ModelRun.objects.get(id=model_id)
                 
-                model_in_queue = models.ModelInQueue.objects.get(model=model)
+                model_in_queue = models.ModelInQueue.objects.filter(model=model).first()
                 queue_position = None
                 if model_in_queue is not None:
                     queue_position = model_in_queue.queue_position
