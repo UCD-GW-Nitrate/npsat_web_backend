@@ -11,6 +11,7 @@ from django.contrib.auth import (
 )
 from npsat_manager.models import CustomUser
 
+import arrow
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for the user object."""
@@ -433,8 +434,16 @@ class RunResultSerializer(serializers.ModelSerializer):
         # if BAU already exists, still rerun in Mantis so the rawSimulationRun can be fetched
         if BAU_instances.count() != 0:
             BAU_model = BAU_instances.first()
-            BAU_model.status = models.ModelRun.READY
-            BAU_model.save()
+            try:
+                # if its raw simulation results exist in the db, 
+                # simply update the expiration date of the RawSimulationRun, 
+                # instead of rerunning
+                bau_raw_result = models.RawSimulationRun.objects.get(model_id=BAU_model.id)
+                bau_raw_result.expiration = arrow.utcnow().shift(days=1).date()
+                bau_raw_result.save()
+            except models.RawSimulationRun.DoesNotExist:
+                BAU_model.status = models.ModelRun.READY
+                BAU_model.save()
 
         model_run = models.ModelRun.objects.create(
             **validated_data,
