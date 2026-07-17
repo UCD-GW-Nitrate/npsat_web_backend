@@ -463,15 +463,6 @@ class RunResultSerializer(serializers.ModelSerializer):
 
         for region in regions_data:
             model_run.regions.add(models.Region.objects.get(id=region["id"]))
- 
-        # add model to processing queue
-        queue_size = models.ModelInQueue.objects.aggregate(
-            Max('queue_position')
-        )['queue_position__max'] or 0
-        models.ModelInQueue.objects.create(
-            model = model_run,
-            queue_position = queue_size + 1,
-        )
 
         # model is ready to run
         model_run.status = models.ModelRun.READY
