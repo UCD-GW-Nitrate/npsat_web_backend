@@ -341,10 +341,19 @@ class GetModelStatus(APIView):
             try:
                 model = models.ModelRun.objects.get(id=model_id)
                 
-                model_in_queue = models.ModelInQueue.objects.filter(model=model).first()
                 queue_position = None
-                if model_in_queue is not None:
-                    queue_position = model_in_queue.queue_position
+                if model.status == models.ModelRun.READY:
+                    queue_position = (
+                        models.ModelRun.objects.filter(
+                            status=models.ModelRun.READY,
+                            is_base=False,
+                        )
+                        .filter(
+                            Q(date_submitted__lt=model.date_submitted)
+                        )
+                        .count()
+                        + 1
+                    )
                 
                 results.append(
                     {"name": model.name, "id": int(model_id), "status": model.status, "queue_position": queue_position}
