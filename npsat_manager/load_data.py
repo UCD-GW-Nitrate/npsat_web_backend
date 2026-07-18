@@ -19,9 +19,9 @@ def load_all(mantis_port_number=5941):
 def load_all_data():
     # load_crops() -- No longer using this one
     load_only_gnlm_crops()
-    # load_regions()
+    load_regions()
     load_scenarios()
-    # load_wells()
+    load_wells()
 
 
 def load_system_admin_bot():

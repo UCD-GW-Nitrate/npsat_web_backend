@@ -687,7 +687,7 @@ def process_results(results, model_run):
     # instead of interpolating between them, mostly because numpy throws errors when we try that.
     # skip all nan in the mantis output
     percentiles = numpy.nanpercentile(
-        results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+        results_2d, q=settings.PERCENTILE_CALCULATIONS, method="nearest", axis=0
     )
     for index, percentile in enumerate(settings.PERCENTILE_CALCULATIONS):
         current_percentiles = json.dumps(

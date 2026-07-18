@@ -845,7 +845,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
             # calculate percentiles and format a response
             percentiles = numpy.nanpercentile(
-                filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, interpolation="nearest", axis=0
+                filtered_results_2d, q=settings.PERCENTILE_CALCULATIONS, method="nearest", axis=0
             )
 
             percentile_map = {}
