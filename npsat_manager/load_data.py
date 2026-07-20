@@ -134,37 +134,69 @@ def load_wells_age(
     age_a_field = "Age_a",
     age_b_field = "Age_b",
 ):
+    """
+            This function should only be ran from scratch (no data in URFPoint table). 
+            Otherwise, bulk_create will duplicate row from the csv if they already 
+            exist in the db.
+    :return:
+    """
     for flow_model, rch_type, well_type in product(flow_models, rch_types, well_types):
         well_csv = csv_dir + f"/wells_{flow_model.lower()}_{rch_type.lower()}_{well_type.lower()}.csv"
         urf_csv = csv_dir + f"/urf_{flow_model.lower()}_{rch_type.lower()}_{well_type.lower()}.csv"
 
-        with open(well_csv, "r") as csv_data:
-            well_list = csv.DictReader(csv_data)
-            for record in well_list:
-                try:
-                    well = models.Well.objects.get(
-                        flow_model=flow_model,
-                        rch_type=rch_type,
-                        well_type=well_type,
-                        eid=record[eid_field],
-                    )
-                    well.pumping = record[pumping_field]
-                    print("update eid " + str(well.eid))
-                except models.Well.DoesNotExist:
-                    print("missing eid" + str(record[eid_field]))
+        #
+        # Load wells once, as a dictionary of eids to Well objects
+        #
+        wells = { # make key a string, since DictReader reads csv values as string
+            str(w.eid): w
+            for w in models.Well.objects.filter(
+                flow_model=flow_model,
+                rch_type=rch_type,
+                well_type=well_type,
+            ).only("id", "eid")
+        }
 
-        with open(urf_csv, "r") as csv_data:
-            urf_list = csv.DictReader(csv_data)
-            for record in urf_list:
-                try:
-                    well = models.Well.objects.get(
-                        flow_model=flow_model,
-                        rch_type=rch_type,
-                        well_type=well_type,
-                        eid=record[eid_field],
-                    )    
-                
-                    urf_point, created = models.URFPoint.objects.get_or_create(
+        BATCH_SIZE = 5000
+
+        #
+        # Update pumping values
+        #
+        updates = []
+
+        with open(well_csv) as csv_data:
+            for record in csv.DictReader(csv_data):
+
+                well = wells.get(record[eid_field])
+
+                if well is None:
+                    continue
+
+                well.pumping = record[pumping_field]
+                updates.append(well)
+
+        models.Well.objects.bulk_update(
+            updates,
+            ["pumping"],
+            batch_size=BATCH_SIZE,
+        )
+
+        print(well_csv, " wrote ", len(updates), " updates.")
+
+        #
+        # Insert URF points
+        #
+        objs = []
+
+        with open(urf_csv) as csv_data:
+            for record in csv.DictReader(csv_data):
+
+                well = wells.get(record[eid_field])
+
+                if well is None:
+                    continue
+
+                objs.append(
+                    models.URFPoint(
                         flow_model=flow_model,
                         rch_type=rch_type,
                         well_type=well_type,
@@ -178,12 +210,20 @@ def load_wells_age(
                         age_b=record[age_b_field],
                         well=well,
                     )
-                    if created:
-                        print(f"new sid {urf_point.sid}")
-                    else:
-                        print(f"exists sid {str(record[sid_field])}")
-                except models.Well.DoesNotExist:
-                    continue
+                )
+
+                if len(objs) >= BATCH_SIZE:
+                    models.URFPoint.objects.bulk_create(
+                        objs,
+                        batch_size=BATCH_SIZE,
+                    )
+                    objs.clear()
+
+        if objs:
+            models.URFPoint.objects.bulk_create(
+                objs,
+                batch_size=BATCH_SIZE,
+            )
 
 
 def load_crops(
