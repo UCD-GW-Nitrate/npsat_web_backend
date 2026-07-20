@@ -1,6 +1,7 @@
 import csv
 import os
 import json
+from itertools import product
 
 from npsat_backend import settings
 
@@ -18,10 +19,11 @@ def load_all(mantis_port_number=5941):
 
 def load_all_data():
     # load_crops() -- No longer using this one
-    load_only_gnlm_crops()
+    # load_only_gnlm_crops()
     # load_regions()
-    load_scenarios()
+    # load_scenarios()
     # load_wells()
+    load_wells_age()
 
 
 def load_system_admin_bot():
@@ -114,6 +116,74 @@ def load_wells(
                 )
                 well.save()
                 print("new " + str(well.eid))
+
+
+def load_wells_age(
+    csv_dir=os.path.join(data_folder, "wells_age_data"),
+    flow_models = ["C2VSim", "CVHM2"],
+    rch_types = ["Padj", "Radj"],
+    well_types = ["VD", "VI"],
+    eid_field = "Eid",
+    pumping_field = "Q_m3d",
+    sid_field = "Sid",
+    lat_field = "Lat",
+    lon_field = "Lon",
+    len_field = "Len",
+    in_river_field = "InRiver",
+    wt2d_field = "WT2D",
+    age_a_field = "Age_a",
+    age_b_field = "Age_b",
+):
+    for flow_model, rch_type, well_type in product(flow_models, rch_types, well_types):
+        well_csv = csv_dir + f"/wells_{flow_model.lower()}_{rch_type.lower()}_{well_type.lower()}.csv"
+        urf_csv = csv_dir + f"/urf_{flow_model.lower()}_{rch_type.lower()}_{well_type.lower()}.csv"
+
+        with open(well_csv, "r") as csv_data:
+            well_list = csv.DictReader(csv_data)
+            for record in well_list:
+                try:
+                    well = models.Well.objects.get(
+                        flow_model=flow_model,
+                        rch_type=rch_type,
+                        well_type=well_type,
+                        eid=record[eid_field],
+                    )
+                    well.pumping = record[pumping_field]
+                    print("update eid " + str(well.eid))
+                except models.Well.DoesNotExist:
+                    print("missing eid" + str(record[eid_field]))
+
+        with open(urf_csv, "r") as csv_data:
+            urf_list = csv.DictReader(csv_data)
+            for record in urf_list:
+                try:
+                    well = models.Well.objects.get(
+                        flow_model=flow_model,
+                        rch_type=rch_type,
+                        well_type=well_type,
+                        eid=record[eid_field],
+                    )    
+                
+                    urf_point, created = models.URFPoint.objects.get_or_create(
+                        flow_model=flow_model,
+                        rch_type=rch_type,
+                        well_type=well_type,
+                        sid=record[sid_field],
+                        lat=record[lat_field],
+                        lon=record[lon_field],
+                        length=record[len_field],
+                        in_river=record[in_river_field],
+                        wt2d=record[wt2d_field],
+                        age_a=record[age_a_field],
+                        age_b=record[age_b_field],
+                        well=well,
+                    )
+                    if created:
+                        print(f"new sid {urf_point.sid}")
+                    else:
+                        print(f"exists sid {str(record[sid_field])}")
+                except models.Well.DoesNotExist:
+                    continue
 
 
 def load_crops(

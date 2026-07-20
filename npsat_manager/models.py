@@ -240,6 +240,7 @@ class Well(models.Model):
     wt2t = models.FloatField(null=False, blank=False)
     slmod = models.FloatField(null=False, blank=False)
     depth = models.FloatField(null=False, blank=False)
+    pumping = models.FloatField(null=True)
     basin = models.CharField(max_length=255, null=False, blank=False)
     county = models.CharField(max_length=255, null=False, blank=False)
     b118 = models.CharField(max_length=255, null=False, blank=False)
@@ -248,6 +249,28 @@ class Well(models.Model):
 
     def __str__(self):
         return self.eid
+
+
+class URFPoint(models.Model):
+    """
+    urf points table, used for well-explorer apis
+    """
+
+    flow_model = models.CharField(max_length=255, null=False, blank=False)
+    rch_type = models.CharField(max_length=255, null=False, blank=False)
+    well_type = models.CharField(max_length=255, null=False, blank=False)
+    sid = models.PositiveIntegerField(null=False, blank=False)
+    lat = models.FloatField(null=False, blank=False)
+    lon = models.FloatField(null=False, blank=False)
+    length = models.FloatField(null=False, blank=False)
+    in_river = models.BooleanField(null=False, blank=False)
+    wt2d = models.FloatField(null=False, blank=False)
+    age_a = models.FloatField(null=False, blank=False)
+    age_b = models.FloatField(null=False, blank=False)
+
+    well = models.ForeignKey(
+        Well, on_delete=models.DO_NOTHING, related_name="urf_points"
+    )
 
 
 # class AreaGroup(models.Model):
