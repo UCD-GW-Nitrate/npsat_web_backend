@@ -28,8 +28,7 @@ from random import randrange
 import numpy
 
 from django.http import HttpResponse
-from django.db import connections
-from django.db.models import Q
+from django.db.models import Q, Exists, ExpressionWrapper, F, FloatField, OuterRef
 
 import arrow
 
@@ -776,25 +775,36 @@ class ResultPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
+    # Helper function for dynamic percentile APIs; retrieves the unaggregated,
+    # breakthrough curves of wells who meet the depth and geospatial criteria
     def fetch_raw_data(self, raw_simulation_run, depth_range_min, depth_range_max, polygonCoords):
         results_array = numpy.array(raw_simulation_run.values, dtype=float)
         results_2d = results_array.reshape(raw_simulation_run.rows, raw_simulation_run.columns)
         
-        # get wells referenced by eid in the raw results that meet the depth criteria
+        # first column of 2d array is well eids
         well_eids = results_2d[:, 0].tolist()
+
+        # fetch wells by eid and filter only the ones that meet the depth criteria
         wells = models.Well.objects.filter(
             eid__in=well_eids,
             depth__gte=depth_range_min,
             depth__lte=depth_range_max
         )
 
+        # filter by user-drawn polygons, don't recount wells if polygons overlap
         if (polygonCoords and len(polygonCoords) > 0):
-            poly = Polygon([(lng, lat) for lat, lng in polygonCoords])
+            seen = set()
+            temp_wells = []
 
-            wells = [
-                w for w in wells
-                if poly.contains(Point(w.lon, w.lat))
-            ]
+            for polyCoords in polygonCoords:
+                poly = Polygon([(lng, lat) for lat, lng in polyCoords])
+
+                for w in wells:
+                    if w.pk not in seen and poly.contains(Point(w.lon, w.lat)):
+                        seen.add(w.pk)
+                        temp_wells.append(w)
+
+            wells = temp_wells
 
         # save eids of filtered wells
         filtered_eid_set = { w.eid for w in wells }
@@ -803,7 +813,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         num_curves = len(filtered_eid_set)
         total_curves = raw_simulation_run.rows
 
-        # create a mask of which rows of the results reference a well with an acceptable depth
+        # create a mask of which rows of the results reference a well which adhere to criteria
         mask = numpy.array([eid in filtered_eid_set for eid in well_eids])
 
         filtered_results_2d = results_2d[mask, :]
@@ -821,6 +831,8 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         if model_id is None or depth_range_min is None or depth_range_max is None:
             return Response({"error": "Missing params"}, status=400)
 
+        # function to find various percentile curves from raw breakthrough curves,
+        # reusable for user-defined model as well as bau
         def get_percentile_map(modelId):  
             query_set = models.RawSimulationRun.objects.filter(
                 Q(model_id=modelId)
@@ -857,7 +869,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         
         (custom_percentile_map, expirationDateTime, num_curves, total_curves) = get_percentile_map(model_id)
         
-        if base_model_id is not None:
+        if base_model_id is not None: # user wants to simulataneously fetch bau and custom results
             (base_percentile_map, _, _, _) = get_percentile_map(base_model_id)
         else:
             base_percentile_map = None
@@ -873,6 +885,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             "total_curves": total_curves
         })
 
+    # Function to fetch upper-and-lower-bounding confidence curves for specified percentile curves
     @action(detail=False, methods=['post'])
     def get_confidence_interval(self, request):
         model_id = request.data.get('model_id')
@@ -885,6 +898,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         if model_id is None or depth_range_min is None or depth_range_max is None or percentiles is None:
             return Response({"error": "Missing params"}, status=400)
 
+        # Get a map of upper and lower confidence curves for each percentile in the request body
         def get_percentile_map(modelId):
             query_set = models.RawSimulationRun.objects.filter(
                 Q(model_id=modelId)
@@ -935,7 +949,7 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
         
         custom_percentile_map = get_percentile_map(model_id)
         
-        if base_model_id is not None:
+        if base_model_id is not None: # user wants to simulataneously fetch bau and custom results
             base_percentile_map = get_percentile_map(base_model_id)
         else:
             base_percentile_map = None
@@ -950,103 +964,99 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
 
 class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'])
-    def region_wells(self, request):  
-        flow_idx = request.data.get('flow')
-        scen_idx = request.data.get('scen')
-        wtype_idx = request.data.get('wtype')
-        bmap_idx = request.data.get('bmap')
-        idmap = request.data.get('idmap')
-
-        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None:
-            return Response({"error": "Missing params"}, status=400)
-        
-        flow_arr=["c2vsim", "cvhm2"];
-        scen_arr=["padj","radj"];
-        wtype_arr=["vi","vd"];
-        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
-
-        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
-
-        query = f"""
-            SELECT Eid, Lat, Lon, Year, Q_m3d, UNSATcond, WT2T, SLmod FROM {table_name} WHERE {bmap_arr[bmap_idx]} = %s
-            """
-
-        with connections['mysql_db'].cursor() as cursor:
-            cursor.execute(
-                query,
-                [idmap]
-            )
-            columns = [col[0] for col in cursor.description]
-            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        return Response(results)
-    
-    @action(detail=False, methods=['post'])
     def well_urf_data(self, request):    
-        flow_idx = request.data.get('flow')
-        scen_idx = request.data.get('scen')
-        wtype_idx = request.data.get('wtype')
-        eid = request.data.get('eid')
+        flow_model = request.data.get("flow_model", False)
+        rch_type = request.data.get("rch_type", False)
+        well_type = request.data.get("well_type", False)
+        eid = request.data.get("eid", False)
 
-        if flow_idx is None or scen_idx is None or wtype_idx is None or eid is None:
+        if flow_model is None or rch_type is None or well_type is None or eid is None:
             return Response({"error": "Missing params"}, status=400)
         
-        flow_arr=["c2vsim", "cvhm2"];
-        scen_arr=["padj","radj"];
-        wtype_arr=["vi","vd"];
+        well = models.Well.objects.get(
+            flow_model=flow_model,
+            rch_type=rch_type,
+            well_type=well_type,
+            eid=eid,
+        )
 
-        table_name="urf_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+        urf_data = well.urf_points.all()
 
-        query = f"""
-            SELECT Sid, Lat, Lon, Len, InRiver, WT2D, Age_a, Age_b FROM {table_name} WHERE eid = %s
-            """
-
-        with connections['mysql_db'].cursor() as cursor:
-            cursor.execute(
-                query,
-                [eid]
-            )
-            columns = [col[0] for col in cursor.description]
-            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        return Response(results)
+        serializer = serializers.URFSerializer(urf_data, many=True)
+        return Response(serializer.data)
+        
     
     @action(detail=False, methods=['post'])
-    def get_wells_by_age_thres(self, request):    
-        flow_idx = request.data.get('flow')
-        scen_idx = request.data.get('scen')
-        wtype_idx = request.data.get('wtype')
-        bmap_idx = request.data.get('bmap')
-        idmap = request.data.get('idmap')
-        por = request.data.get('por')
-        agethres = request.data.get('agethres')
+    def get_wells_by_age_thres(self, request):
+        # Filter wells by their associated "urf_points"
+        # Only keep wells who have at least ONE urf row
+        # which meets the age threshold: 
+        # porosity * urf_point.age_a + urf_point.age_b >= agethres 
 
-        if flow_idx is None or scen_idx is None or wtype_idx is None or bmap_idx is None or idmap is None or por is None or agethres is None:
+        flow_model = request.data.get("flow_model")
+        rch_type = request.data.get("rch_type")
+        well_type = request.data.get("well_type")
+        depth_range_min = request.data.get("depth_range_min")
+        depth_range_max = request.data.get("depth_range_max")
+        
+        # Each of the following params will be arrays of region ids
+        basin = request.data.get("basin")
+        county = request.data.get("county")
+        b118 = request.data.get("b118")
+        tship = request.data.get("tship")
+        subreg = request.data.get("subreg")
+        
+        # Params to filter by agethres
+        porosity = request.data.get("por")
+        agethres = request.data.get("agethres")
+
+        wells = models.Well.objects.all()
+        if flow_model is None or rch_type is None or well_type is None:
             return Response({"error": "Missing params"}, status=400)
         
-        flow_arr=["c2vsim", "cvhm2"];
-        scen_arr=["padj","radj"];
-        wtype_arr=["vi","vd"];
-        bmap_arr=["CentralValley","Basin","County","B118", "Township", "IRG"];
+        # Apply well attribute filters
+        wells = wells.filter(flow_model=flow_model)
+        wells = wells.filter(rch_type=rch_type)
+        wells = wells.filter(well_type=well_type)
 
-        table_name="wells_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
-        urf_table_name="urf_" + flow_arr[flow_idx] + "_" + scen_arr[scen_idx] + "_" + wtype_arr[wtype_idx];
+        if depth_range_min:
+            wells = wells.filter(depth__gte=depth_range_min)
 
-        query = f"""
-            SELECT w.Eid, w.Lat, w.Lon, w.Year, w.Q_m3d, w.UNSATcond, w.WT2T, w.SLmod, x.age
-            FROM {table_name} w
-            INNER JOIN (
-                SELECT u.eid, COUNT(%s * Age_a + Age_b) AS age
-                FROM {urf_table_name} u
-                WHERE %s * Age_a + Age_b > %s
-                GROUP BY u.eid
-            ) AS x ON x.eid = w.eid
-            WHERE w.{bmap_arr[bmap_idx]} = %s
-            ORDER BY w.Eid
-            """
-        with connections['mysql_db'].cursor() as cursor:
-            cursor.execute(
-                query,
-                [por, por, agethres, idmap]
+        if depth_range_max:
+            wells = wells.filter(depth__lte=depth_range_max)
+
+        if basin:
+            wells = wells.filter(basin__in=basin)
+        elif county:
+            wells = wells.filter(county__in=county)
+        elif b118:
+            wells = wells.filter(b118__in=b118)
+        elif tship:
+            wells = wells.filter(tship__in=tship)
+        elif subreg:
+            wells = wells.filter(subreg__in=subreg)
+        
+        if porosity is None or agethres is None:
+            serializer = serializers.WellExplorerSerializer(wells, many=True)
+            return Response(serializer.data)
+
+        # Filter based on associated urf points
+        qualifying_urf = (
+            models.URFPoint.objects
+            .filter(well_id=OuterRef("pk"))
+            .annotate(
+                calculated_age=ExpressionWrapper(
+                    porosity * F("age_a") + F("age_b"),
+                    output_field=FloatField(),
+                )
             )
-            columns = [col[0] for col in cursor.description]
-            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        return Response(results)
+            .filter(
+                age_a__isnull=False,
+                age_b__isnull=False,
+                calculated_age__gt=agethres,
+            )
+        )
+        wells = wells.filter(Exists(qualifying_urf))
+
+        serializer = serializers.WellExplorerSerializer(wells, many=True)
+        return Response(serializer.data)
