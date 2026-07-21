@@ -791,14 +791,20 @@ class DynamicPercentileViewSet(viewsets.ReadOnlyModelViewSet):
             depth__lte=depth_range_max
         )
 
-        # filter by user-drawn, geospatial criteria
+        # filter by user-drawn polygons, don't recount wells if polygons overlap
         if (polygonCoords and len(polygonCoords) > 0):
-            poly = Polygon([(lng, lat) for lat, lng in polygonCoords])
+            seen = set()
+            temp_wells = []
 
-            wells = [
-                w for w in wells
-                if poly.contains(Point(w.lon, w.lat))
-            ]
+            for polyCoords in polygonCoords:
+                poly = Polygon([(lng, lat) for lat, lng in polyCoords])
+
+                for w in wells:
+                    if w.pk not in seen and poly.contains(Point(w.lon, w.lat)):
+                        seen.add(w.pk)
+                        temp_wells.append(w)
+
+            wells = temp_wells
 
         # save eids of filtered wells
         filtered_eid_set = { w.eid for w in wells }
