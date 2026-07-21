@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from npsat_manager import models
 from npsat_backend import local_settings
-from django.db.models import Q, Max
+from django.db.models import Q
 from django.contrib.auth import (
     get_user_model,
     authenticate,
@@ -171,6 +171,26 @@ class WellSerializer(serializers.ModelSerializer):
             "tship", 
             "subreg",
         )
+
+
+class WellExplorerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Well
+        fields = (
+            "eid", 
+            "lat", 
+            "lon", 
+            "unsat", 
+            "wt2t", 
+            "slmod", 
+            "depth",
+        )
+
+
+class URFSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.URFPoint
+        fields = '__all__'
 
 
 class ScenarioSerializer(serializers.ModelSerializer):
