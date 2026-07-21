@@ -1029,8 +1029,6 @@ class WellExplorerViewset(viewsets.ReadOnlyModelViewSet):
             wells = wells.filter(tship__in=tship)
         elif subreg:
             wells = wells.filter(subreg__in=subreg)
-        else:
-            return Response({"error": "Missing params"}, status=400)
         
         if porosity is None or agethres is None:
             serializer = serializers.WellExplorerSerializer(wells, many=True)
