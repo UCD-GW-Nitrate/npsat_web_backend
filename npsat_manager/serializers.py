@@ -184,6 +184,7 @@ class WellExplorerSerializer(serializers.ModelSerializer):
             "wt2t", 
             "slmod", 
             "depth",
+            "pumping",
         )
 
 
