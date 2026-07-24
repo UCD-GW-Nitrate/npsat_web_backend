@@ -1,6 +1,7 @@
 import csv
 import os
 import json
+from itertools import product
 
 from npsat_backend import settings
 
@@ -114,6 +115,114 @@ def load_wells(
                 )
                 well.save()
                 print("new " + str(well.eid))
+
+
+def load_wells_age(
+    csv_dir=os.path.join(data_folder, "wells_age_data"),
+    flow_models = ["C2VSim", "CVHM2"],
+    rch_types = ["Padj", "Radj"],
+    well_types = ["VD", "VI"],
+    eid_field = "Eid",
+    pumping_field = "Q_m3d",
+    sid_field = "Sid",
+    lat_field = "Lat",
+    lon_field = "Lon",
+    len_field = "Len",
+    in_river_field = "InRiver",
+    wt2d_field = "WT2D",
+    age_a_field = "Age_a",
+    age_b_field = "Age_b",
+):
+    """
+            This function should only be ran from scratch (no data in URFPoint table). 
+            Otherwise, bulk_create will duplicate row from the csv if they already 
+            exist in the db.
+    :return:
+    """
+    for flow_model, rch_type, well_type in product(flow_models, rch_types, well_types):
+        well_csv = csv_dir + f"/wells_{flow_model.lower()}_{rch_type.lower()}_{well_type.lower()}.csv"
+        urf_csv = csv_dir + f"/urf_{flow_model.lower()}_{rch_type.lower()}_{well_type.lower()}.csv"
+
+        #
+        # Load wells once, as a dictionary of eids to Well objects
+        #
+        wells = { # make key a string, since DictReader reads csv values as string
+            str(w.eid): w
+            for w in models.Well.objects.filter(
+                flow_model=flow_model,
+                rch_type=rch_type,
+                well_type=well_type,
+            ).only("id", "eid")
+        }
+
+        BATCH_SIZE = 5000
+
+        #
+        # Update pumping values
+        #
+        updates = []
+
+        with open(well_csv) as csv_data:
+            for record in csv.DictReader(csv_data):
+
+                well = wells.get(record[eid_field])
+
+                if well is None:
+                    continue
+
+                well.pumping = record[pumping_field]
+                updates.append(well)
+
+        models.Well.objects.bulk_update(
+            updates,
+            ["pumping"],
+            batch_size=BATCH_SIZE,
+        )
+
+        print(well_csv, " wrote ", len(updates), " updates.")
+
+        #
+        # Insert URF points
+        #
+        objs = []
+
+        with open(urf_csv) as csv_data:
+            for record in csv.DictReader(csv_data):
+
+                well = wells.get(record[eid_field])
+
+                if well is None:
+                    continue
+
+                objs.append(
+                    models.URFPoint(
+                        flow_model=flow_model,
+                        rch_type=rch_type,
+                        well_type=well_type,
+                        sid=record[sid_field],
+                        lat=record[lat_field],
+                        lon=record[lon_field],
+                        length=record[len_field],
+                        in_river=record[in_river_field],
+                        wt2d=record[wt2d_field],
+                        age_a=record[age_a_field],
+                        age_b=record[age_b_field],
+                        well=well,
+                    )
+                )
+
+                if len(objs) >= BATCH_SIZE:
+                    models.URFPoint.objects.bulk_create(
+                        objs,
+                        batch_size=BATCH_SIZE,
+                    )
+                    objs.clear()
+
+        if objs:
+            models.URFPoint.objects.bulk_create(
+                objs,
+                batch_size=BATCH_SIZE,
+            )
 
 
 def load_crops(
