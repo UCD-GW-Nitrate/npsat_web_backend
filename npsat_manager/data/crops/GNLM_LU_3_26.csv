@@ -11,7 +11,7 @@ Apples,401,Tree Fruit
 Cherries,403,Tree Fruit
 Peaches and Nectarines,405,Tree Fruit
 Pears,406,Tree Fruit
-Prunes,408,Tree Fruit
+Plums/Prunes/Apricots (grouped),408,Tree Fruit
 Figs,409,Tree Fruit
 Almonds,412,Nuts
 Walnuts,413,Nuts
@@ -20,7 +20,7 @@ Pistachios,414,Nuts
 Cotton,601,Cotton
 Safflower,602,Field Crops
 Sugar Beets,605,Field Crops
-Corn (Field and Sweet),606,"Corn, Sorghum, Sudan"
+Corn/Sorghum/Sudan (grouped),606,"Corn, Sorghum, Sudan"
 Beans (dry),610,Field Crops
 Sunflowers,612,Field Crops
 Grain and Hay (includes miscellaneous),700,Grain and Hay
@@ -42,7 +42,7 @@ Lettuce,2008,Vegetables and Berries
 "Melons, squash, cucumbers",2009,Vegetables and Berries
 Onions and garlic,2010,Vegetables and Berries
 Peas,2011,Vegetables and Berries
-Sweet Potatoes,2013,Vegetables and Berries
+Potatoes/Sweet Potatoes,2013,Vegetables and Berries
 Spinach,2014,Vegetables and Berries
 Tomatoes,2015,Vegetables and Berries
 Bush berries,2019,Vegetables and Berries
