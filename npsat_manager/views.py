@@ -644,14 +644,20 @@ class ModelRunViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(instance, many=True)
         return Response(serializer.data)
     
-    def list(self, response):
+    def list(self, request, *args, **kwargs):
         modelIds = self.request.query_params.getlist("modelIds", [])
-        serializer = None
         if len(modelIds) > 0:
-            query_set = models.ModelRun.objects.filter(id__in=modelIds)
-            serializer = self.get_serializer(query_set, many=True)
-        else:
-            serializer = self.get_serializer(models.ModelRun.objects.all(), many=True)
+            queryset = models.ModelRun.objects.filter(id__in=modelIds)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 
@@ -660,6 +666,7 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         include_public = self.request.query_params.get("public", "true")
         include_base = self.request.query_params.get("isBase", "true")
         include_origin = self.request.query_params.get("origin", "true")
+        exclude_base = self.request.query_params.get("excludeBase", "false")
         # all objects available for user
         # here we are doing a logic like this:
         # as long as the model satisfies any of the true conditions, include it
@@ -693,6 +700,10 @@ class ModelRunViewSet(viewsets.ModelViewSet):
         if not query:
             return []
         results = models.ModelRun.objects.filter(query)
+
+        if exclude_base == "true":
+            results = results.exclude(is_base=True)
+
         if status:
             results = results.filter(status__in=status.split(","))
 
