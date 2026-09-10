@@ -360,6 +360,8 @@ class ModelRun(models.Model):
     # 801 is reserved for the maximum value possible, when passing to message to mantis, set it to 10000
     unsat_range_max = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
     unsat_range_min = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=5)
+    max_conc = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=10)
+    pixel_radius = models.IntegerField(null=True, blank=True)
 
     # scenarios
     # here we use explicit fields and set a limit to each
@@ -493,6 +495,12 @@ class ModelRun(models.Model):
             if self.unsat_range_min is not None and self.unsat_range_max is not None:
                 range_max = str(self.unsat_range_max) if self.depth_range_max != 801 else "10000"
                 msg += f" UnsatRange {str(self.unsat_range_min)} {range_max}"
+
+        if self.max_conc is not None:
+                msg += f" maxConc {self.max_conc}"
+
+        if self.pixel_radius is not None:
+            msg += f" PixelRadius {self.pixel_radius}"
 
         msg += " ENDofMSG\n"
         return msg

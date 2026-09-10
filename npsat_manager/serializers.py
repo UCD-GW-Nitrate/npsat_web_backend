@@ -345,6 +345,8 @@ class RunResultSerializer(serializers.ModelSerializer):
             "unsat_range_min",
             "unsat_range_max",
             "mantis_version",
+            "max_conc",
+            "pixel_radius",
         )
         depth = 0  # should mean that modifications get included in the initial request
         extra_kwargs = {"user": {"required": False}}
