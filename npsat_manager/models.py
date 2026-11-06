@@ -196,11 +196,13 @@ class Scenario(models.Model):
     TYPE_UNSAT = 2
     TYPE_LOAD = 3
     TYPE_WELLTYPE = 4
+    TYPE_DENIT = 5
     SCENARIO_TYPE = [
         (TYPE_FLOW, "flowScen"),
         (TYPE_UNSAT, "unsatScen"),
         (TYPE_LOAD, "loadScen"),
         (TYPE_WELLTYPE, "wellType"),
+        (TYPE_DENIT, "denit"),
     ]
 
     # macros for crop used
@@ -388,6 +390,19 @@ class ModelRun(models.Model):
         limit_choices_to={"scenario_type": Scenario.TYPE_WELLTYPE},
     )
 
+    # denitrification - optional, all three are set together or not at all
+    # wells where the denit map value is above threshold get their concentration reduced by fraction_removed
+    denit_scenario = models.ForeignKey(
+        Scenario,
+        on_delete=models.DO_NOTHING,
+        related_name="model_runs_denit",
+        limit_choices_to={"scenario_type": Scenario.TYPE_DENIT},
+        null=True,
+        blank=True,
+    )
+    denit_threshold = models.DecimalField(null=True, blank=True, decimal_places=3, max_digits=4)
+    denit_fraction_removed = models.DecimalField(null=True, blank=True, decimal_places=3, max_digits=4)
+
     # resulting metadata from mantis
     n_wells = models.IntegerField(null=True, blank=True)
 
@@ -493,6 +508,10 @@ class ModelRun(models.Model):
             if self.unsat_range_min is not None and self.unsat_range_max is not None:
                 range_max = str(self.unsat_range_max) if self.depth_range_max != 801 else "10000"
                 msg += f" UnsatRange {str(self.unsat_range_min)} {range_max}"
+
+        # denitrification is optional, mantis skips it when the token is omitted
+        if self.denit_scenario is not None:
+            msg += f" denit {self.denit_scenario.mantis_id} {self.denit_threshold} {self.denit_fraction_removed}"
 
         msg += " ENDofMSG\n"
         return msg

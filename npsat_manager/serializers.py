@@ -310,6 +310,7 @@ class RunResultSerializer(serializers.ModelSerializer):
     load_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
     flow_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
     welltype_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True)
+    denit_scenario = ScenarioSerializer(many=False, read_only=False, allow_null=True, required=False)
     results = NestedResultPercentileSerializer(many=True, read_only=True)
 
     class Meta:
@@ -339,6 +340,9 @@ class RunResultSerializer(serializers.ModelSerializer):
             "flow_scenario",
             "unsat_scenario",
             "welltype_scenario",
+            "denit_scenario",
+            "denit_threshold",
+            "denit_fraction_removed",
             "applied_simulation_filter",
             "depth_range_min",
             "depth_range_max",
@@ -350,6 +354,14 @@ class RunResultSerializer(serializers.ModelSerializer):
         extra_kwargs = {"user": {"required": False}}
 
     def validate(self, data):
+        # denitrification needs both values in [0, 1] once a denit map is selected
+        if data.get("denit_scenario") is not None:
+            for field in ("denit_threshold", "denit_fraction_removed"):
+                value = data.get(field)
+                if value is None:
+                    raise serializers.ValidationError({field: "Required when a denitrification map is selected."})
+                if not 0 <= value <= 1:
+                    raise serializers.ValidationError({field: "Must be between 0 and 1."})
         return data
 
     def create(self, validated_data):
@@ -360,6 +372,10 @@ class RunResultSerializer(serializers.ModelSerializer):
         load_scenario = validated_data.pop("load_scenario")
         flow_scenario = validated_data.pop("flow_scenario")
         welltype_scenario = validated_data.pop("welltype_scenario")
+        denit_scenario = validated_data.pop("denit_scenario", None)
+        if denit_scenario is None:
+            validated_data.pop("denit_threshold", None)
+            validated_data.pop("denit_fraction_removed", None)
         water_content = validated_data["water_content"]
         porosity = validated_data["porosity"]
         sim_end_year = validated_data["sim_end_year"]
@@ -473,6 +489,7 @@ class RunResultSerializer(serializers.ModelSerializer):
             flow_scenario=models.Scenario.objects.get(id=flow_scenario["id"]),
             load_scenario=models.Scenario.objects.get(id=load_scenario["id"]),
             welltype_scenario=models.Scenario.objects.get(id=welltype_scenario["id"]),
+            denit_scenario=models.Scenario.objects.get(id=denit_scenario["id"]) if denit_scenario else None,
         )
         for modification in modifications_data:
             proportion = modification["proportion"]

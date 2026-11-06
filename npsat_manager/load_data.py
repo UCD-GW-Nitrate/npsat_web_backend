@@ -616,6 +616,8 @@ def enable_scenario_dev_data():
                 scenario_type = models.Scenario.TYPE_FLOW
             elif category == "Well Type Scenario":
                 scenario_type = models.Scenario.TYPE_WELLTYPE
+            elif category == "Denitrification Scenario":
+                scenario_type = models.Scenario.TYPE_DENIT
             else:
                 scenario_type = models.Scenario.TYPE_UNSAT
             models.Scenario.objects.create(
