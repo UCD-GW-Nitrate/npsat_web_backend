@@ -356,6 +356,10 @@ class RunResultSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # denitrification needs both values in [0, 1] once a denit map is selected
         if data.get("denit_scenario") is not None:
+            if not models.Scenario.objects.filter(
+                id=data["denit_scenario"].get("id"), scenario_type=models.Scenario.TYPE_DENIT
+            ).exists():
+                raise serializers.ValidationError({"denit_scenario": "Must be a denitrification scenario."})
             for field in ("denit_threshold", "denit_fraction_removed"):
                 value = data.get(field)
                 if value is None:
