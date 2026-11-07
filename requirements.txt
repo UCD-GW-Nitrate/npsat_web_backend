@@ -12,4 +12,4 @@ drf-yasg==1.21.7
 pyyaml==6.0.2
 uritemplate==4.1.1
 numba
-numpy
+numpy<2  # nanpercentile(interpolation=...) was removed in NumPy 2
